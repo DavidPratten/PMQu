@@ -20,11 +20,11 @@ PMQu is an open-source project information quality checker for [MS Project](http
 ### Install PMQu for the first time
 PMQu is a Visual Basic for Applications macro that works with MS Project 2010-2013.  Here are the instructions for a first time installation.
 * Download the [latest version](https://github.com/DavidPratten/PMQu/archive/master.zip) of PMQu
-* Unzip the downloaded master.zip file, and note the folder which now contains PMQu.bas
+* Unzip the downloaded PMQu-master.zip file, and note the folder which now contains PMQu.bas
 * Open MS Project
 * Click Alt+F11 to open the Microsoft Visual Basic for Applications window.
-* ...
-
+* Right click on "Modules" under "ProjectGlobal" and then on "Import File" as shown here:
+![Removing PMQu](Resources/importpmqu.png)
 ### Add PMQu to the ribbon
 
 ## Upgrade Instructions
@@ -34,7 +34,6 @@ To upgrade to the latest version of PMQu, follow these steps to remove the old v
 * Remove the PMQu module as shown here   
 ![Removing PMQu](Resources/removepmqu.png)
 * Proceed to install PMQu as above for first time installers.
-Dagre-d3 is a [D3](http://d3js.org)-based renderer for [dagre](https://github.com/cpettitt/dagre).
 
 #Quality Checks   
 ##Project  
