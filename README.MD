@@ -29,7 +29,8 @@ PMQu is a Visual Basic for Applications macro that works with MS Project 2010-20
 To upgrade to the latest version of PMQu, follow these steps to remove the old version and then proceed as for a First Time Installation
 * Open MS Project
 * Click Alt+F11
-* ...
+* Remove the PMQu module as shown here   
+![Removing PMQu](Resources/removepmqu.png)
 * Proceed to install PMQu as above for first time installers.
 Dagre-d3 is a [D3](http://d3js.org)-based renderer for [dagre](https://github.com/cpettitt/dagre).
 
