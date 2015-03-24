@@ -24,7 +24,7 @@ PMQu is a Visual Basic for Applications macro that works with MS Project 2010-20
 * Open MS Project
 * Click Alt+F11 to open the Microsoft Visual Basic for Applications window.
 * Right click on "Modules" under "ProjectGlobal" and then on "Import File" as shown here:
-![Removing PMQu](Resources/importpmqu.png)
+![Removing PMQu](Resources/importPMQu.png)
 ### Add PMQu to the ribbon
 
 ## Upgrade Instructions
