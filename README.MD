@@ -19,7 +19,7 @@ PMQu is an open-source project information quality checker for [MS Project](http
 ## First Time Instructions
 ### Install PMQu for the first time
 PMQu is a Visual Basic for Applications macro that works with MS Project 2010-2013.  Here are the instructions for a first time installation.
-* Download the [PMQu.bas](PMQu.bas) file
+* Download the [PMQu.bas](https://github.com/DavidPratten/PMQu/raw/master/PMQu.bas) file
 * Open MS Project
 * Click Alt+F11 to open the Microsoft Visual Basic for Applications window.
 * ...
