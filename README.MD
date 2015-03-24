@@ -12,7 +12,7 @@ PMQu is an open-source project information quality checker for [MS Project](http
 # PMQu is sustained by your interest
 * Download and use PMQu in your project or PMO.
 * Log an issue or a feature request.
-* Download the source, add a feature or bugfix and send a pull request.
+* Clone the repository, add a feature or bugfix, and send a pull request.
 
 # Installing
 ## First Time Instructions
