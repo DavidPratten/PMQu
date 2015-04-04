@@ -97,8 +97,8 @@ Dim tskID As Variant
 ActualResultsFieldID = FieldIDofCustomField("Actual Results", "Text")
 ExpectedResultsFieldId = FieldIDofCustomField("Expected Results", "Text")
 ActualAsExpectedFieldID = FieldIDofCustomField("Actual As Expected", "Text")
+Set Lookaside = New Dictionary
 If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedFieldID > 0 Then ' this is a test file
-
     Set SubPlans = SubPlans_set()
     If SubPlans.Count = 0 Then
         MsgBox "This test plan does not contain any SubPlans to run tests on."
@@ -108,26 +108,25 @@ If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedF
             tsk.SetField ActualAsExpectedFieldID, ""
             tsk.SetField ActualResultsFieldID, ""
         Next
-        For i = 1 To SubPlans.Count
-            LowID = Val(SubPlans(i))
-            If i = SubPlans.Count Then
+        For i = 0 To UBound(SubPlans.Keys)
+            LowID = Val(SubPlans.Keys(i))
+            If i = UBound(SubPlans.Keys) Then
                 HighID = ActiveProject.tasks.Count
             Else
-                HighID = SubPlans(i + 1) - 1
+                HighID = Val(SubPlans.Keys(i + 1)) - 1
             End If
             Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check", LowID, HighID, True)
-            ' Unpack results into the test project
-            For Each tskID In Res("actualresults").Keys
-                ActiveProject.tasks(Val(tskID)).SetField ActualResultsFieldID, Res("results")(tskID)
-            Next
         Next
         ' Compare Actual with Expected updating results
         For Each tsk In ActiveProject.tasks
             If tsk.GetField(ActualResultsFieldID) <> tsk.GetField(ExpectedResultsFieldId) Then
                 tsk.SetField ActualAsExpectedFieldID, "FAIL"
+            Else
+                tsk.SetField ActualAsExpectedFieldID, "OK"
             End If
         Next
     End If
+    MsgBox "Test Mode - no report was be created.  Check for 'FAIL' results in 'Actual As Expected' field"
 Else
     Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check", 1, ActiveProject.tasks.Count, False)
     
@@ -169,7 +168,6 @@ End Function
 Private Function CheckAnalyse(IncludedTests As String, ReportName As String, LowID As Long, HighID As Long, Testing As Boolean) As Dictionary
 ' IncludedTests "All" = all, otherwise a comma separated list of tests to perform
     Application.StatusBar = "Schedule Health Check ..."
-    Set Lookaside = New Dictionary
     Dim tsk As Task
     Dim tsk2 As Task
     Dim message As String
@@ -220,7 +218,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String, Low
     message = ""
     'details = ""
     Dim healthcheckoptionsFieldName As String
-    healthcheckoptionsFieldName = "Health Check Exclusions"
+    healthcheckoptionsFieldName = "PMQu Check Exclusions"
     HealthCheckOptionsID = FieldIDofCustomField(healthcheckoptionsFieldName, "Text")
     
     
@@ -1072,18 +1070,27 @@ continue2332:
     If numOf(16) = 1 Then
         numOf(16) = 0
         details(16) = ""
+        For Each tsk In ActiveProject.tasks
+            If Testing Then tsk.SetField ActualResultsFieldID, Replace(tsk.GetField(ActualResultsFieldID), "," & Str(16), "")
+        Next
     End If
     
     ' #18 is a global test and the goal is 1
     If numOf(18) = 1 Then
         numOf(18) = 0
         details(18) = ""
+        For Each tsk In ActiveProject.tasks
+            If Testing Then tsk.SetField ActualResultsFieldID, Replace(tsk.GetField(ActualResultsFieldID), "," & Str(18), "")
+        Next
     End If
     
     ' #32 is a global test and the goal is 1
     If numOf(32) = 1 Then
         numOf(32) = 0
         details(32) = ""
+        For Each tsk In ActiveProject.tasks
+            If Testing Then tsk.SetField ActualResultsFieldID, Replace(tsk.GetField(ActualResultsFieldID), "," & Str(32), "")
+        Next
     End If
   
         
