@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.122"
+Global Const ver = "1.0.123"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -439,11 +439,9 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
         Dim StatusDateMilestoneID As Integer
         StatusDateMilestoneID = -1
         For Each tsk In ActiveProject.tasks
-            'Debug.Print tsk.ID
             If tsk.Name = "Status Date Milestone" And tsk.OutlineLevel = 1 And tsk.Milestone And tsk.ConstraintType = pjSNET Then
                 StatusDateMilestoneID = tsk.ID
                 tsk.ConstraintDate = ReallyStatusDate()
-                'tsk.Start = ReallyStatusDate() ' side affect is set contraint type to SNET and Constraint Date to this date anyway.
             End If
         Next
         If StatusDateMilestoneID = -1 Then
