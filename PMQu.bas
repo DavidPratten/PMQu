@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.123"
+Global Const ver = "1.0.124"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -84,16 +84,60 @@ Public Sub OpenReport(fn As String)
     lSuccess = ShellExecute(0, "Open", fn)
 End Sub
 Sub ScheduleHealthCheck()
+Dim SubPlans As Dictionary
 Dim Res As Dictionary
+Dim ActualResultsFieldID As Long
+Dim ExpectedResultsFieldId As Long
+Dim ActualAsExpectedFieldID As Long
+Dim LowID As Long
+Dim HighID As Long
+Dim i As Long
+Dim tsk As Task
+Dim tskID As Variant
+ActualResultsFieldID = FieldIDofCustomField("Actual Results", "Text")
+ExpectedResultsFieldId = FieldIDofCustomField("Expected Results", "Text")
+ActualAsExpectedFieldID = FieldIDofCustomField("Actual As Expected", "Text")
+If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedFieldID > 0 Then ' this is a test file
 
-Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check")
-
-Dim chkPathName As String
-If Res("Linked to Disk File") Then
-    chkPathName = CreateReport("Check", Res("message"))
-    OpenReport (chkPathName)
+    Set SubPlans = SubPlans_set()
+    If SubPlans.Count = 0 Then
+        MsgBox "This test plan does not contain any SubPlans to run tests on."
+    Else
+        ' clear out previous test results.
+        For Each tsk In ActiveProject.tasks
+            tsk.SetField ActualAsExpectedFieldID, ""
+            tsk.SetField ActualResultsFieldID, ""
+        Next
+        For i = 1 To SubPlans.Count
+            LowID = Val(SubPlans(i))
+            If i = SubPlans.Count Then
+                HighID = ActiveProject.tasks.Count
+            Else
+                HighID = SubPlans(i + 1) - 1
+            End If
+            Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check", LowID, HighID)
+            ' Unpack results into the test project
+            For Each tskID In Res("actualresults").Keys
+                ActiveProject.tasks(Val(tskID)).SetField ActualResultsFieldID, Res("results")(tskID)
+            Next
+        Next
+        ' Compare Actual with Expected updating results
+        For Each tsk In ActiveProject.tasks
+            If tsk.GetField(ActualResultsFieldID) <> tsk.GetField(ExpectedResultsFieldId) Then
+                tsk.SetField ActualAsExpectedFieldID, "FAIL"
+            End If
+        Next
+    End If
 Else
-    MsgBox "The project must be first saved to disk."
+    Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check", 1, ActiveProject.tasks.Count)
+    
+    Dim chkPathName As String
+    If Res("Linked to Disk File") Then
+        chkPathName = CreateReport("Check", Res("message"))
+        OpenReport (chkPathName)
+    Else
+        MsgBox "The project must be first saved to disk."
+    End If
 End If
 End Sub
 
@@ -122,7 +166,7 @@ Private Function CreateReport(Suffix As String, message As String) As String
     oFile.Close
     CreateReport = chkPathName
 End Function
-Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As Dictionary
+Private Function CheckAnalyse(IncludedTests As String, ReportName As String, LowID As Long, HighID As Long) As Dictionary
 ' IncludedTests "All" = all, otherwise a comma separated list of tests to perform
     Application.StatusBar = "Schedule Health Check ..."
     Set Lookaside = New Dictionary
@@ -423,13 +467,15 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     'Prior to analysis move the "Status Date Milestone to the ReallyStatusDate().
     
     For Each tsk In ActiveProject.tasks
-        testNo = 40
-        If tsk Is Nothing Then
-            numOf(testNo) = numOf(testNo) + 1
-            If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "Blank task #" & numOf(testNo) & " found." & htmlCrLf
-        ElseIf Trim(tsk.Name) = "" Then
-            numOf(testNo) = numOf(testNo) + 1
-            If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "Blank task #" & numOf(testNo) & " found." & htmlCrLf
+        If tsk.ID >= LowID And tsk.ID <= HighID Then
+            testNo = 40
+            If tsk Is Nothing Then
+                numOf(testNo) = numOf(testNo) + 1
+                If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "Blank task #" & numOf(testNo) & " found." & htmlCrLf
+            ElseIf Trim(tsk.Name) = "" Then
+                numOf(testNo) = numOf(testNo) + 1
+                If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "Blank task #" & numOf(testNo) & " found." & htmlCrLf
+            End If
         End If
     Next
     
@@ -439,9 +485,11 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
         Dim StatusDateMilestoneID As Integer
         StatusDateMilestoneID = -1
         For Each tsk In ActiveProject.tasks
-            If tsk.Name = "Status Date Milestone" And tsk.OutlineLevel = 1 And tsk.Milestone And tsk.ConstraintType = pjSNET Then
-                StatusDateMilestoneID = tsk.ID
-                tsk.ConstraintDate = ReallyStatusDate()
+            If tsk.ID >= LowID And tsk.ID <= HighID Then
+                If tsk.Name = "Status Date Milestone" And tsk.OutlineLevel = 1 And tsk.Milestone And tsk.ConstraintType = pjSNET Then
+                    StatusDateMilestoneID = tsk.ID
+                    tsk.ConstraintDate = ReallyStatusDate()
+                End If
             End If
         Next
         If StatusDateMilestoneID = -1 Then
@@ -451,18 +499,20 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
             ' check to see if any of the successors have low slack
             
             For Each tsk2 In ActiveProject.tasks(StatusDateMilestoneID).SuccessorTasks
-                ' check if successors have already started
-                testNo = 39
-                If tsk2.PercentComplete <> 0 Then
-                    If IncludedOf(testNo) Then
-                        numOf(testNo) = numOf(testNo) + 1
-                        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & "Remove predecessor [" & ActiveProject.tasks(StatusDateMilestoneID).ID & "] from " & tsk2.Name & "[" & tsk2.ID & "] it started on " & tsk2.ActualStart & htmlCrLf
-                    End If
-                Else ' only test if 39 passes
-                    testNo = 35
-                    If Min(tsk2.TotalSlack, tsk2.StartSlack) < 10 * minPerDay And IncludedOf(testNo) Then
-                        numOf(testNo) = numOf(testNo) + 1
-                        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk2.Name & "[" & tsk2.ID & "] has " & Min(tsk2.TotalSlack, tsk2.StartSlack) / minPerDay & " days slack" & htmlCrLf
+                If tsk2.ID >= LowID And tsk2.ID <= HighID Then
+                    ' check if successors have already started
+                    testNo = 39
+                    If tsk2.PercentComplete <> 0 Then
+                        If IncludedOf(testNo) Then
+                            numOf(testNo) = numOf(testNo) + 1
+                            If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & "Remove predecessor [" & ActiveProject.tasks(StatusDateMilestoneID).ID & "] from " & tsk2.Name & "[" & tsk2.ID & "] it started on " & tsk2.ActualStart & htmlCrLf
+                        End If
+                    Else ' only test if 39 passes
+                        testNo = 35
+                        If Min(tsk2.TotalSlack, tsk2.StartSlack) < 10 * minPerDay And IncludedOf(testNo) Then
+                            numOf(testNo) = numOf(testNo) + 1
+                            If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk2.Name & "[" & tsk2.ID & "] has " & Min(tsk2.TotalSlack, tsk2.StartSlack) / minPerDay & " days slack" & htmlCrLf
+                        End If
                     End If
                 End If
             Next
@@ -476,236 +526,239 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
         
        
         For Each tsk In ActiveProject.tasks
-    
-            If tsk.Summary Then
-                If tsk.Assignments.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 1) < 0 And IncludedOf(1) Then
-                    numOf(1) = numOf(1) + 1
-                    If numOf(1) < maxpertestplus1 Then details(1) = details(1) & "    " & tsk.Name & "[" & tsk.ID & "] " & htmlCrLf
+            If tsk.ID >= LowID And tsk.ID <= HighID Then
+                If tsk.Summary Then
+                    If tsk.Assignments.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 1) < 0 And IncludedOf(1) Then
+                        numOf(1) = numOf(1) + 1
+                        If numOf(1) < maxpertestplus1 Then details(1) = details(1) & "    " & tsk.Name & "[" & tsk.ID & "] " & htmlCrLf
+                    End If
                 End If
-            End If
-            
-            If tsk.Summary Then
-                If tsk.SuccessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 2) < 0 And IncludedOf(2) Then
-                    numOf(2) = numOf(2) + 1
-                    If numOf(2) < maxpertestplus1 Then details(2) = details(2) & "    " & tsk.Name & "[" & tsk.ID & "] " & htmlCrLf
+                
+                If tsk.Summary Then
+                    If tsk.SuccessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 2) < 0 And IncludedOf(2) Then
+                        numOf(2) = numOf(2) + 1
+                        If numOf(2) < maxpertestplus1 Then details(2) = details(2) & "    " & tsk.Name & "[" & tsk.ID & "] " & htmlCrLf
+                    End If
                 End If
-            End If
-            
-            If tsk.Summary Then
-                If tsk.PredecessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 3) < 0 And IncludedOf(3) Then
-                    numOf(3) = numOf(3) + 1
-                    If numOf(3) < maxpertestplus1 Then details(3) = details(3) & "    " & tsk.Name & "[" & tsk.ID & "] " & htmlCrLf
+                
+                If tsk.Summary Then
+                    If tsk.PredecessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 3) < 0 And IncludedOf(3) Then
+                        numOf(3) = numOf(3) + 1
+                        If numOf(3) < maxpertestplus1 Then details(3) = details(3) & "    " & tsk.Name & "[" & tsk.ID & "] " & htmlCrLf
+                    End If
                 End If
-            End If
-            
-            If Not tsk.Summary Then
-                If (tsk.Finish - tsk.Start) > 30 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 4) < 0 And IncludedOf(4) Then
-                    numOf(4) = numOf(4) + 1
-                    If numOf(4) < maxpertestplus1 Then details(4) = details(4) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                
+                If Not tsk.Summary Then
+                    If (tsk.Finish - tsk.Start) > 30 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 4) < 0 And IncludedOf(4) Then
+                        numOf(4) = numOf(4) + 1
+                        If numOf(4) < maxpertestplus1 Then details(4) = details(4) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
                 End If
-            End If
-            
-            If Not tsk.Milestone And Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 6) < 0 And IncludedOf(6) Then
-                If Not (tsk.ConstraintType = pjASAP) Then
-                    numOf(6) = numOf(6) + 1
-                    If numOf(6) < maxpertestplus1 Then details(6) = details(6) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                
+                If Not tsk.Milestone And Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 6) < 0 And IncludedOf(6) Then
+                    If Not (tsk.ConstraintType = pjASAP) Then
+                        numOf(6) = numOf(6) + 1
+                        If numOf(6) < maxpertestplus1 Then details(6) = details(6) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
                 End If
-            End If
-            
-            If tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 7) < 0 And IncludedOf(7) Then
-                If Not (tsk.ConstraintType = pjASAP) Then
-                    numOf(7) = numOf(7) + 1
-                    If numOf(7) < maxpertestplus1 Then details(7) = details(7) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                
+                If tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 7) < 0 And IncludedOf(7) Then
+                    If Not (tsk.ConstraintType = pjASAP) Then
+                        numOf(7) = numOf(7) + 1
+                        If numOf(7) < maxpertestplus1 Then details(7) = details(7) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
                 End If
-            End If
-            
-            If tsk.Manual And tskFieldExactMatch(tsk, HealthCheckOptionsID, 8) < 0 And IncludedOf(8) Then
-                numOf(8) = numOf(8) + 1
-                If numOf(8) < maxpertestplus1 Then details(8) = details(8) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-            End If
-            
-            If Not tsk.Milestone And Not tsk.Summary And tsk.Type <> pjFixedUnits And tskFieldExactMatch(tsk, HealthCheckOptionsID, 9) < 0 And IncludedOf(9) Then
-                numOf(9) = numOf(9) + 1
-                If numOf(9) < maxpertestplus1 Then details(9) = details(9) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-            End If
-            
-            If Not tsk.Milestone And Not tsk.Summary And tsk.EffortDriven And tskFieldExactMatch(tsk, HealthCheckOptionsID, 50) < 0 And IncludedOf(50) Then
-                numOf(50) = numOf(50) + 1
-                If numOf(50) < maxpertestplus1 Then details(50) = details(50) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-            End If
-            
-            If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 10) < 0 And IncludedOf(10) Then
-                If tsk.PredecessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0 Or tsk.ConstraintType = pjSNET) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 5) = "Start") Then 'ignore external milestones and ignore
-                    numOf(10) = numOf(10) + 1
-                    If numOf(10) < maxpertestplus1 Then details(10) = details(10) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                
+                If tsk.Manual And tskFieldExactMatch(tsk, HealthCheckOptionsID, 8) < 0 And IncludedOf(8) Then
+                    numOf(8) = numOf(8) + 1
+                    If numOf(8) < maxpertestplus1 Then details(8) = details(8) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
                 End If
-            End If
+                
+                If Not tsk.Milestone And Not tsk.Summary And tsk.Type <> pjFixedUnits And tskFieldExactMatch(tsk, HealthCheckOptionsID, 9) < 0 And IncludedOf(9) Then
+                    numOf(9) = numOf(9) + 1
+                    If numOf(9) < maxpertestplus1 Then details(9) = details(9) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                End If
+                
+                If Not tsk.Milestone And Not tsk.Summary And tsk.EffortDriven And tskFieldExactMatch(tsk, HealthCheckOptionsID, 50) < 0 And IncludedOf(50) Then
+                    numOf(50) = numOf(50) + 1
+                    If numOf(50) < maxpertestplus1 Then details(50) = details(50) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                End If
+                
+                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 10) < 0 And IncludedOf(10) Then
+                    If tsk.PredecessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0 Or tsk.ConstraintType = pjSNET) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 5) = "Start") Then 'ignore external milestones and ignore
+                        numOf(10) = numOf(10) + 1
+                        If numOf(10) < maxpertestplus1 Then details(10) = details(10) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
+                End If
+            
+                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 11) < 0 And IncludedOf(11) Then
+                    If tsk.SuccessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0 Or tsk.ConstraintType = pjFNLT Or tsk.ID = StatusDateMilestoneID) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 6) = "Finish") Then
+                        numOf(11) = numOf(11) + 1
+                        If numOf(11) < maxpertestplus1 Then details(11) = details(11) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
+                End If
+                
+                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 12) < 0 And IncludedOf(12) Then
+                    If InStr(tsk.DurationText, "?") > 0 Then
+                        numOf(12) = numOf(12) + 1
+                        If numOf(12) < maxpertestplus1 Then details(12) = details(12) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
+                End If
         
-            If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 11) < 0 And IncludedOf(11) Then
-                If tsk.SuccessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0 Or tsk.ConstraintType = pjFNLT Or tsk.ID = StatusDateMilestoneID) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 6) = "Finish") Then
-                    numOf(11) = numOf(11) + 1
-                    If numOf(11) < maxpertestplus1 Then details(11) = details(11) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-                End If
-            End If
-            
-            If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 12) < 0 And IncludedOf(12) Then
-                If InStr(tsk.DurationText, "?") > 0 Then
-                    numOf(12) = numOf(12) + 1
-                    If numOf(12) < maxpertestplus1 Then details(12) = details(12) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-                End If
-            End If
-    
-            Dim chld As Task
-            If tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 13) < 0 And IncludedOf(13) Then
-                startFound = False
-                finishFound = False
-                startCount = 0
-                finishCount = 0
-                For Each chld In tsk.OutlineChildren
-                    If chld.Milestone And chld.Name = "Start " & tsk.Name Then
-                        startFound = True
-                        StartMilestoneID.Add tsk.ID, chld.ID
-                    End If
-                    If chld.Milestone And chld.Name = "Finish " & tsk.Name Then
-                        FinishMilestoneID.Add tsk.ID, chld.ID
-                        finishFound = True
-                    End If
-                    If Left(chld.Name, 6) = "Start " Then
-                        startCount = startCount + 1
-                    End If
-                    If Left(chld.Name, 7) = "Finish " Then
-                        finishCount = finishCount + 1
-                    End If
-                Next
-                If Not startFound Or Not finishFound Then
-                    numOf(13) = numOf(13) + 1
-                    If numOf(13) < maxpertestplus1 Then details(13) = details(13) & "    " & tsk.Name & "[" & tsk.ID & "] doesn't have "
-                    If Not startFound Then
-                        If numOf(13) < maxpertestplus1 Then details(13) = details(13) & "Start "
-                    End If
-                    If Not finishFound Then
-                        If numOf(13) < maxpertestplus1 Then details(13) = details(13) & "Finish "
-                    End If
-                    If numOf(13) < maxpertestplus1 Then details(13) = details(13) & "Milestone(s)" & htmlCrLf
-                End If
-                If numOf(13) = 0 And startCount > 1 Then
-                    numOf(41) = numOf(41) + 1
-                    If numOf(41) < maxpertestplus1 Then details(41) = details(41) & "    Summary Task has multiple chilren with names beginning with 'Start ' - " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-                End If
-                If numOf(13) = 0 And finishCount > 1 Then
-                    numOf(42) = numOf(42) + 1
-                    If numOf(42) < maxpertestplus1 Then details(42) = details(42) & "    Summary Task has multiple chilren with names beginning with 'Finish ' - " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-                End If
-            End If
-            
-            If tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, 14) < 0 And IncludedOf(14) Then
-                If tsk.Assignments.Count > 0 Then
-                    numOf(14) = numOf(14) + 1
-                    If numOf(14) < maxpertestplus1 Then details(14) = details(14) & "    " & tsk.Name & "[" & tsk.ID & "] " & htmlCrLf
-                End If
-            End If
-            For Each tsk2 In ActiveProject.tasks
-                If tsk2.Name = tsk.Name And tsk2.ID <> tsk.ID And tskFieldExactMatch(tsk, HealthCheckOptionsID, 19) < 0 And IncludedOf(19) Then
-                    numOf(19) = numOf(19) + 1
-                    If numOf(19) < maxpertestplus1 And tsk2.ID > tsk.ID Then details(19) = details(19) & "    " & tsk.Name & " name is duplicated [" & tsk.ID & "] and [" & tsk2.ID & "] " & htmlCrLf
-                End If
-            Next
-            
-            If PermanentIDFieldID <> 0 Then
-                If tsk.GetField(PermanentIDFieldID) = 0 Then
-                    numOf(49) = numOf(49) + 1
-                    If numOf(49) < maxpertestplus1 Then details(49) = details(49) & "    " & tsk.Name & "[" & tsk.ID & "] has a Permanent ID less than 1." & htmlCrLf
-                Else
-                    
-                    For Each tsk2 In ActiveProject.tasks
-                        If tsk2.GetField(PermanentIDFieldID) = tsk.GetField(PermanentIDFieldID) And tsk2.ID > tsk.ID And tskFieldExactMatch(tsk, HealthCheckOptionsID, 44) < 0 And IncludedOf(44) Then
-                            numOf(44) = numOf(44) + 1
-                            If numOf(44) < maxpertestplus1 And tsk2.ID > tsk.ID Then details(44) = details(44) & "    " & tsk.GetField(PermanentIDFieldID) & " is a duplicated 'Permanent ID' between [" & tsk.ID & "] and [" & tsk2.ID & "] " & htmlCrLf
+                Dim chld As Task
+                If tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 13) < 0 And IncludedOf(13) Then
+                    startFound = False
+                    finishFound = False
+                    startCount = 0
+                    finishCount = 0
+                    For Each chld In tsk.OutlineChildren
+                        If chld.Milestone And chld.Name = "Start " & tsk.Name Then
+                            startFound = True
+                            StartMilestoneID.Add tsk.ID, chld.ID
+                        End If
+                        If chld.Milestone And chld.Name = "Finish " & tsk.Name Then
+                            FinishMilestoneID.Add tsk.ID, chld.ID
+                            finishFound = True
+                        End If
+                        If Left(chld.Name, 6) = "Start " Then
+                            startCount = startCount + 1
+                        End If
+                        If Left(chld.Name, 7) = "Finish " Then
+                            finishCount = finishCount + 1
                         End If
                     Next
-                    MaxPermID = Max(Int(tsk.GetField(PermanentIDFieldID)), MaxPermID)
+                    If Not startFound Or Not finishFound Then
+                        numOf(13) = numOf(13) + 1
+                        If numOf(13) < maxpertestplus1 Then details(13) = details(13) & "    " & tsk.Name & "[" & tsk.ID & "] doesn't have "
+                        If Not startFound Then
+                            If numOf(13) < maxpertestplus1 Then details(13) = details(13) & "Start "
+                        End If
+                        If Not finishFound Then
+                            If numOf(13) < maxpertestplus1 Then details(13) = details(13) & "Finish "
+                        End If
+                        If numOf(13) < maxpertestplus1 Then details(13) = details(13) & "Milestone(s)" & htmlCrLf
+                    End If
+                    If numOf(13) = 0 And startCount > 1 Then
+                        numOf(41) = numOf(41) + 1
+                        If numOf(41) < maxpertestplus1 Then details(41) = details(41) & "    Summary Task has multiple chilren with names beginning with 'Start ' - " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
+                    If numOf(13) = 0 And finishCount > 1 Then
+                        numOf(42) = numOf(42) + 1
+                        If numOf(42) < maxpertestplus1 Then details(42) = details(42) & "    Summary Task has multiple chilren with names beginning with 'Finish ' - " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
                 End If
-            End If
-            
-            
-        
-            If Not tsk.Summary And Not tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, 20) < 0 And IncludedOf(20) Then
-                If tsk.Duration < 8 * 60 Then
-                    numOf(20) = numOf(20) + 1
-                    If numOf(20) < maxpertestplus1 Then details(20) = details(20) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                
+                If tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, 14) < 0 And IncludedOf(14) Then
+                    If tsk.Assignments.Count > 0 Then
+                        numOf(14) = numOf(14) + 1
+                        If numOf(14) < maxpertestplus1 Then details(14) = details(14) & "    " & tsk.Name & "[" & tsk.ID & "] " & htmlCrLf
+                    End If
                 End If
-            End If
-        
-    
-            testNo = 27
-            If tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(27) Then
-                If tsk.OutlineChildren.Count < 4 Then
-                    numOf(testNo) = numOf(testNo) + 1
-                    If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-                End If
-            End If
-        'MSO, SNET, or FNLT
-            testNo = 28
-            If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
-                If Min(tsk.StartSlack, Min(tsk.FinishSlack, tsk.TotalSlack)) < 0 And ((tsk.ConstraintType = pjMSO And tsk.Start <> tsk.ConstraintDate) Or (tsk.ConstraintType = pjSNET And tsk.Start < tsk.ConstraintDate) Or (tsk.ConstraintType = pjFNLT And tsk.Finish > tsk.ConstraintDate)) Then
-                    numOf(testNo) = numOf(testNo) + 1
-                    If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "] has " & Min(tsk.TotalSlack, tsk.StartSlack) / minPerDay & " days slack " & htmlCrLf
-                End If
-            End If
-        
-            testNo = 29
-            If Not tsk.Summary And Not tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
-                If Max(tsk.StartSlack, Max(tsk.FinishSlack, tsk.TotalSlack)) > 30 * 8 * 60 Then
-                    numOf(testNo) = numOf(testNo) + 1
-                    If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-                End If
-            End If
-        
-            testNo = 30
-            If tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
-                If tsk.PercentComplete <> 0 And tsk.PercentComplete <> 100 Then
-                    numOf(testNo) = numOf(testNo) + 1
-                    If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-                End If
-            End If
-       
-            
-            
-            ' check for common predecessors
-            If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 46) < 0 And IncludedOf(46) Then
-                Set thistsk = New Dictionary
-                thistsk.Add Str(tsk.ID), Str(tsk.ID)
                 For Each tsk2 In ActiveProject.tasks
-                    If tsk.ID < tsk2.ID Then
-                        Set thistsk2 = New Dictionary
-                        thistsk2.Add Str(tsk2.ID), Str(tsk2.ID)
-                        Set cola = Intersect(successors_set(thistsk), thistsk2)
-                        If cola.Count() > 0 Then ' successors can't have interesting sets of common precessors
-                            GoTo continue2332:
-                        End If
-                        Set cola = Intersect(successors_set(thistsk2), thistsk)
-                        If cola.Count() > 0 Then ' successors can't have interesting sets of common precessors
-                            GoTo continue2332:
-                        End If
-                        Set cola = Intersect(tasks_set(tsk.PredecessorTasks), tasks_set(tsk2.PredecessorTasks))
-                        If cola.Count() > 1 Then
-                            numOf(46) = numOf(46) + 1
-                            If numOf(46) < maxpertestplus1 Then details(46) = details(46) & "    " & tsk2.Name & "[" & tsk2.ID & "]  and " & tsk.Name & "[" & tsk.ID & "] have the " & cola.Count() & " predecessors [" & Trim(Join(cola.Keys(), ", ")) & "] in common." & htmlCrLf
+                    If tsk2.ID >= LowID And tsk2.ID <= HighID Then
+                        If tsk2.Name = tsk.Name And tsk2.ID <> tsk.ID And tskFieldExactMatch(tsk, HealthCheckOptionsID, 19) < 0 And IncludedOf(19) Then
+                            numOf(19) = numOf(19) + 1
+                            If numOf(19) < maxpertestplus1 And tsk2.ID > tsk.ID Then details(19) = details(19) & "    " & tsk.Name & " name is duplicated [" & tsk.ID & "] and [" & tsk2.ID & "] " & htmlCrLf
                         End If
                     End If
-continue2332:
                 Next
-            End If
-    
+                
+                If PermanentIDFieldID <> 0 Then
+                    If tsk.GetField(PermanentIDFieldID) = 0 Then
+                        numOf(49) = numOf(49) + 1
+                        If numOf(49) < maxpertestplus1 Then details(49) = details(49) & "    " & tsk.Name & "[" & tsk.ID & "] has a Permanent ID less than 1." & htmlCrLf
+                    Else
+                        
+                        For Each tsk2 In ActiveProject.tasks
+                            If tsk2.ID >= LowID And tsk2.ID <= HighID Then
+                                If tsk2.GetField(PermanentIDFieldID) = tsk.GetField(PermanentIDFieldID) And tsk2.ID > tsk.ID And tskFieldExactMatch(tsk, HealthCheckOptionsID, 44) < 0 And IncludedOf(44) Then
+                                    numOf(44) = numOf(44) + 1
+                                    If numOf(44) < maxpertestplus1 And tsk2.ID > tsk.ID Then details(44) = details(44) & "    " & tsk.GetField(PermanentIDFieldID) & " is a duplicated 'Permanent ID' between [" & tsk.ID & "] and [" & tsk2.ID & "] " & htmlCrLf
+                                End If
+                            End If
+                        Next
+                        MaxPermID = Max(Int(tsk.GetField(PermanentIDFieldID)), MaxPermID)
+                    End If
+                End If
+                
+                
             
+                If Not tsk.Summary And Not tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, 20) < 0 And IncludedOf(20) Then
+                    If tsk.Duration < 8 * 60 Then
+                        numOf(20) = numOf(20) + 1
+                        If numOf(20) < maxpertestplus1 Then details(20) = details(20) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
+                End If
             
-            testNo = 32
-            If tsk.OutlineLevel = 1 And tsk.ID <> StatusDateMilestoneID And IncludedOf(32) Then
-                numOf(testNo) = numOf(testNo) + 1
-                If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+        
+                testNo = 27
+                If tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(27) Then
+                    If tsk.OutlineChildren.Count < 4 Then
+                        numOf(testNo) = numOf(testNo) + 1
+                        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
+                End If
+            'MSO, SNET, or FNLT
+                testNo = 28
+                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
+                    If Min(tsk.StartSlack, Min(tsk.FinishSlack, tsk.TotalSlack)) < 0 And ((tsk.ConstraintType = pjMSO And tsk.Start <> tsk.ConstraintDate) Or (tsk.ConstraintType = pjSNET And tsk.Start < tsk.ConstraintDate) Or (tsk.ConstraintType = pjFNLT And tsk.Finish > tsk.ConstraintDate)) Then
+                        numOf(testNo) = numOf(testNo) + 1
+                        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "] has " & Min(tsk.TotalSlack, tsk.StartSlack) / minPerDay & " days slack " & htmlCrLf
+                    End If
+                End If
+            
+                testNo = 29
+                If Not tsk.Summary And Not tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
+                    If Max(tsk.StartSlack, Max(tsk.FinishSlack, tsk.TotalSlack)) > 30 * 8 * 60 Then
+                        numOf(testNo) = numOf(testNo) + 1
+                        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
+                End If
+            
+                testNo = 30
+                If tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
+                    If tsk.PercentComplete <> 0 And tsk.PercentComplete <> 100 Then
+                        numOf(testNo) = numOf(testNo) + 1
+                        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
+                End If
+           
+                
+                
+                ' check for common predecessors
+                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 46) < 0 And IncludedOf(46) Then
+                    Set thistsk = New Dictionary
+                    thistsk.Add Str(tsk.ID), Str(tsk.ID)
+                    For Each tsk2 In ActiveProject.tasks
+                        If tsk.ID < tsk2.ID Then
+                            Set thistsk2 = New Dictionary
+                            thistsk2.Add Str(tsk2.ID), Str(tsk2.ID)
+                            Set cola = Intersect(successors_set(thistsk), thistsk2)
+                            If cola.Count() > 0 Then ' successors can't have interesting sets of common precessors
+                                GoTo continue2332:
+                            End If
+                            Set cola = Intersect(successors_set(thistsk2), thistsk)
+                            If cola.Count() > 0 Then ' successors can't have interesting sets of common precessors
+                                GoTo continue2332:
+                            End If
+                            Set cola = Intersect(tasks_set(tsk.PredecessorTasks), tasks_set(tsk2.PredecessorTasks))
+                            If cola.Count() > 1 Then
+                                numOf(46) = numOf(46) + 1
+                                If numOf(46) < maxpertestplus1 Then details(46) = details(46) & "    " & tsk2.Name & "[" & tsk2.ID & "]  and " & tsk.Name & "[" & tsk.ID & "] have the " & cola.Count() & " predecessors [" & Trim(Join(cola.Keys(), ", ")) & "] in common." & htmlCrLf
+                            End If
+                        End If
+continue2332:
+                    Next
+                End If
+        
+                
+                
+                testNo = 32
+                If tsk.OutlineLevel = 1 And tsk.ID <> StatusDateMilestoneID And IncludedOf(32) Then
+                    numOf(testNo) = numOf(testNo) + 1
+                    If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                End If
             End If
-    
-       
         Next tsk
         
         
@@ -713,7 +766,7 @@ continue2332:
     Set FinishMilestones = InvertDictionary(FinishMilestoneID)
      
     For Each tsk In ActiveProject.tasks
-    
+        If tsk.ID >= LowID And tsk.ID <= HighID Then
             If tsk.Summary Then
                 For Each chld In tsk.OutlineChildren
                     If chld.Milestone And chld.Name = "Start " & tsk.Name Then
@@ -841,38 +894,38 @@ continue2332:
                End If
        
             End If
-        
-        
-        Next tsk
-        
-        testNo = 33
-        If ActiveProject.DisplayProjectSummaryTask And IncludedOf(testNo) Then
-            numOf(testNo) = numOf(testNo) + 1
         End If
+    Next tsk
         
+    testNo = 33
+    If ActiveProject.DisplayProjectSummaryTask And IncludedOf(testNo) Then
+        numOf(testNo) = numOf(testNo) + 1
+    End If
+    
+    
+    If numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 Then   ' Only perform this test if otherwise all OK.
         
-        If numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 Then   ' Only perform this test if otherwise all OK.
-            
+    
+        testNo = 43
         
-            testNo = 43
-            
-            If IncludedOf(testNo) Then
-            
-                Dim InError As Boolean
-                Dim Taskto As Task
-                Dim Taskfrom As Task
-                Dim WBSfrom As Integer
-                Dim WBSto As Integer
-                Dim DepList As New Dictionary
-                Dim DepCount As Integer
-                Dim DepKey As Variant
-                Dim FromToStartFinish As Boolean
-                Const iWBSfrom = 0
-                Const iWBSto = 1
-                Const iTaskfromID = 2
-                Const iTasktoID = 3
-                DepCount = 0
-                For Each Taskfrom In ActiveProject.tasks
+        If IncludedOf(testNo) Then
+        
+            Dim InError As Boolean
+            Dim Taskto As Task
+            Dim Taskfrom As Task
+            Dim WBSfrom As Integer
+            Dim WBSto As Integer
+            Dim DepList As New Dictionary
+            Dim DepCount As Integer
+            Dim DepKey As Variant
+            Dim FromToStartFinish As Boolean
+            Const iWBSfrom = 0
+            Const iWBSto = 1
+            Const iTaskfromID = 2
+            Const iTasktoID = 3
+            DepCount = 0
+            For Each Taskfrom In ActiveProject.tasks
+                If Taskfrom.ID >= LowID And Taskfrom.ID <= HighID Then
                     For Each Taskto In Taskfrom.SuccessorTasks
                         ' translate Start / Finish Milestones to be represented by their Summary Task
                         FromToStartFinish = False
@@ -899,37 +952,38 @@ continue2332:
                             DepList.Add DepCount, Array(WBSfrom, WBSto, Taskfrom.ID, Taskto.ID)
                         End If
                     Next
-                Next
-                For Each DepKey In DepList
-                    InError = False
-                    If DepList(DepKey)(iWBSfrom) = DepList(DepKey)(iWBSto) Then ' can't depend on itself
-                        InError = True
-                    ElseIf wbs_descendents_set(ActiveProject.tasks(DepList(DepKey)(iWBSfrom))).Exists(Str(DepList(DepKey)(iWBSto))) Then 'if wbsto is a descendent of wbsfrom
-                        InError = InError Or StartMilestoneID(DepList(DepKey)(iWBSfrom)) <> DepList(DepKey)(iTaskfromID) 'allowable if from  start milestone
-                        If ActiveProject.tasks(DepList(DepKey)(iWBSto)).Summary Then
-                            InError = InError Or StartMilestoneID(DepList(DepKey)(iWBSto)) <> DepList(DepKey)(iTasktoID) 'allowable if to  start milestone
-                            InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel + 1 <> ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel ' immediate = one level different
-                        Else
-                            InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel <> ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel 'immediate means same level
-                        End If
-                    ElseIf wbs_descendents_set(ActiveProject.tasks(DepList(DepKey)(iWBSto))).Exists(Str(DepList(DepKey)(iWBSfrom))) Then 'if wbsfrom is a descendent of wbsto
-                        InError = InError Or FinishMilestoneID(DepList(DepKey)(iWBSto)) <> DepList(DepKey)(iTasktoID)  ' allowable if to finish milestone
-                        If ActiveProject.tasks(DepList(DepKey)(iWBSfrom)).Summary Then
-                            InError = InError Or FinishMilestoneID(DepList(DepKey)(iWBSfrom)) <> DepList(DepKey)(iTaskfromID) ' allowable if from finish milestone
-                            InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel + 1 <> ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel ' immediate = one level different
-                        Else
-                            InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel <> ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel 'immediate means same level
-                        End If
+                End If
+            Next
+            For Each DepKey In DepList
+                InError = False
+                If DepList(DepKey)(iWBSfrom) = DepList(DepKey)(iWBSto) Then ' can't depend on itself
+                    InError = True
+                ElseIf wbs_descendents_set(ActiveProject.tasks(DepList(DepKey)(iWBSfrom))).Exists(Str(DepList(DepKey)(iWBSto))) Then 'if wbsto is a descendent of wbsfrom
+                    InError = InError Or StartMilestoneID(DepList(DepKey)(iWBSfrom)) <> DepList(DepKey)(iTaskfromID) 'allowable if from  start milestone
+                    If ActiveProject.tasks(DepList(DepKey)(iWBSto)).Summary Then
+                        InError = InError Or StartMilestoneID(DepList(DepKey)(iWBSto)) <> DepList(DepKey)(iTasktoID) 'allowable if to  start milestone
+                        InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel + 1 <> ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel ' immediate = one level different
+                    Else
+                        InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel <> ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel 'immediate means same level
                     End If
-                    If InError Then
-                        numOf(testNo) = numOf(testNo) + 1
-                        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).Name & "[" & DepList(DepKey)(iTaskfromID) & "] has invalid successor dependency to " & ActiveProject.tasks(DepList(DepKey)(iTasktoID)).Name & "[" & DepList(DepKey)(iTasktoID) & "]" & htmlCrLf
+                ElseIf wbs_descendents_set(ActiveProject.tasks(DepList(DepKey)(iWBSto))).Exists(Str(DepList(DepKey)(iWBSfrom))) Then 'if wbsfrom is a descendent of wbsto
+                    InError = InError Or FinishMilestoneID(DepList(DepKey)(iWBSto)) <> DepList(DepKey)(iTasktoID)  ' allowable if to finish milestone
+                    If ActiveProject.tasks(DepList(DepKey)(iWBSfrom)).Summary Then
+                        InError = InError Or FinishMilestoneID(DepList(DepKey)(iWBSfrom)) <> DepList(DepKey)(iTaskfromID) ' allowable if from finish milestone
+                        InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel + 1 <> ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel ' immediate = one level different
+                    Else
+                        InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel <> ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel 'immediate means same level
                     End If
-                Next DepKey
-            End If
-            
-
+                End If
+                If InError Then
+                    numOf(testNo) = numOf(testNo) + 1
+                    If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).Name & "[" & DepList(DepKey)(iTaskfromID) & "] has invalid successor dependency to " & ActiveProject.tasks(DepList(DepKey)(iTasktoID)).Name & "[" & DepList(DepKey)(iTasktoID) & "]" & htmlCrLf
+                End If
+            Next DepKey
         End If
+        
+
+    End If
     
     
     End If
@@ -937,7 +991,7 @@ continue2332:
     If numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 And numOf(51) = 0 And numOf(52) = 0 Then
     
         For Each tsk In ActiveProject.tasks
-        
+            If tsk.ID >= LowID And tsk.ID <= HighID Then
                 ' Check that distant dependencies are from an interim milestone.
                 If Not tsk.Summary And Not tsk.Milestone And tsk.OutlineLevel > 1 And tsk.SuccessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 45) < 0 And IncludedOf(45) Then
                     For Each tsk2 In tsk.SuccessorTasks
@@ -957,7 +1011,7 @@ continue2332:
                         End If
                     Next
                 End If
-        
+            End If
         Next
         
     End If
@@ -993,38 +1047,39 @@ continue2332:
 
     If maxSev <= sevWarning Then
         For Each tsk In ActiveProject.tasks
-        ' Progress theme only perform these if no other errors
-        
-            If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 21) And IncludedOf(21) Then
-                If tsk.Start < ReallyStatusDate() And Not IsDate(tsk.ActualStart) Then
-                    numOf(21) = numOf(21) + 1
-                    If numOf(21) < maxpertestplus1 Then details(21) = details(21) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-                End If
-            End If
-        
-            If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 22) And IncludedOf(22) Then
-                If tsk.Finish < ReallyStatusDate() And Not IsDate(tsk.ActualFinish) Then
-                    numOf(22) = numOf(22) + 1
-                    If numOf(22) < maxpertestplus1 Then details(22) = details(22) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
-                End If
-            End If
-    
-            testNo = 25
-            If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
-                If IsDate(tsk.ActualStart) Then
-                    If Int(tsk.ActualStart) > ReallyStatusDate() Then
-                        numOf(testNo) = numOf(testNo) + 1
-                        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+            ' Progress theme only perform these if no other errors
+            If tsk.ID >= LowID And tsk.ID <= HighID Then
+                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 21) And IncludedOf(21) Then
+                    If tsk.Start < ReallyStatusDate() And Not IsDate(tsk.ActualStart) Then
+                        numOf(21) = numOf(21) + 1
+                        If numOf(21) < maxpertestplus1 Then details(21) = details(21) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
                     End If
                 End If
-            End If
+            
+                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 22) And IncludedOf(22) Then
+                    If tsk.Finish < ReallyStatusDate() And Not IsDate(tsk.ActualFinish) Then
+                        numOf(22) = numOf(22) + 1
+                        If numOf(22) < maxpertestplus1 Then details(22) = details(22) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                    End If
+                End If
         
-            testNo = 26
-            If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
-                If IsDate(tsk.ActualFinish) Then
-                    If Int(tsk.ActualFinish) > ReallyStatusDate() Then
-                        numOf(testNo) = numOf(testNo) + 1
-                        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                testNo = 25
+                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
+                    If IsDate(tsk.ActualStart) Then
+                        If Int(tsk.ActualStart) > ReallyStatusDate() Then
+                            numOf(testNo) = numOf(testNo) + 1
+                            If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                        End If
+                    End If
+                End If
+            
+                testNo = 26
+                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
+                    If IsDate(tsk.ActualFinish) Then
+                        If Int(tsk.ActualFinish) > ReallyStatusDate() Then
+                            numOf(testNo) = numOf(testNo) + 1
+                            If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
+                        End If
                     End If
                 End If
             End If
@@ -1210,6 +1265,23 @@ Next
 Set tasks_set = Res
 End Function
 
+Function SubPlans_set() As Dictionary
+Dim lookasidekey As String
+lookasidekey = "SubPlans_set"
+If Lookaside.Exists(lookasidekey) Then
+    Set SubPlans_set = Lookaside.Item(lookasidekey)
+    Exit Function
+End If
+Dim tsk As Task
+Dim Res As New Dictionary
+For Each tsk In ActiveProject.tasks
+    If tsk.OutlineLevel = 1 And tsk.OutlineChildren.Count > 0 Then ' top level with outline children
+        Res.Add Str(tsk.ID), Str(tsk.ID)
+    End If
+Next
+Lookaside.Add lookasidekey, Res
+Set SubPlans_set = Res
+End Function
 Private Function wbs_descendents_set(tsk As Task, Optional recursive As Boolean = True) As Dictionary
     ' Network Descendents
     Dim lookasidekey As String
@@ -1603,3 +1675,6 @@ Public Function FileFolderExists(strFullPath As String) As Boolean
 EarlyExit:
     On Error GoTo 0
 End Function
+
+
+
