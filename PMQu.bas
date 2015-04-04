@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.121"
+Global Const ver = "1.0.122"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -96,41 +96,6 @@ Else
     MsgBox "The project must be first saved to disk."
 End If
 End Sub
-
-'Sub PFD2Schedule()
-'Dim Res As Dictionary
-'Set Res = CheckAnalyse("13, 19, 27, 31, 32, 33", "Convert PFD to Schedule")
-'If Res("TotalFound") = 0 Then
-'    AddDeleteImplicitDependencies "Delete", Res("StartMilestoneID"), Res("FinishMilestoneID")
-'    AddDeleteImplicitDependencies "Add", Res("StartMilestoneID"), Res("FinishMilestoneID")
-'    DeleteRedundantDependencies
-'End If
-'Dim chkPathName As String
-'If Res("Linked to Disk File") Then
-'    chkPathName = CreateReport("PDF2Schedule", Res("message"))
-'    OpenReport (chkPathName)
-'Else
-'    MsgBox "The project must be first saved to disk."
-'End If
-
-'End Sub
-'Sub Schedule2PFD()
-'Dim Res As Dictionary
-'
-'Set Res = CheckAnalyse("13, 19, 27, 31, 32, 33", "Convert Schedule to PFD")'
-'
-'If Res("TotalFound") = 0 Then
-'    AddDeleteImplicitDependencies "Delete", Res("StartMilestoneID"), Res("FinishMilestoneID")
-'End If'
-'
-'Dim chkPathName As String
-'If Res("Linked to Disk File") Then
-'    chkPathName = CreateReport("PDF2Schedule", Res("message"))
-'    OpenReport (chkPathName)
-'Else
-'    MsgBox "The project must be first saved to disk."
-'End If
-'End Sub
 
 Private Function CreateReport(Suffix As String, message As String) As String
     Dim msgStyle As VbMsgBoxStyle
@@ -351,51 +316,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     
     Res.Add "Linked to Disk File", (UBound(Split(ActiveProject.FullName, ".")) > 0)
     
-    ' Ideas
-    ' As At date print at top of report
-    '
-    
-    ' Optimisation
-    '
-    ' ideas
-    ' test 31 only include FS 0 lag dependencies. by generalising successor_set to use taskdependencies
-    '   with optional parameter to clamp to fs0l
-    '
-    ' flag depth of WBS beyond 3? or average span less than 5?
-    '
-    ' schedule quality
-    ' *** detect critical path sections longer than n days without a critical chain-like buffer task of m days.
-    '
-    ' Progress Theme
-    '
-    ' WBS Integration
-    '
-    '
-    ' Schedule Maturity
-    '"Tasks which do not have a single person responsible for the performance of the activity" p27
-    '    e.g. Text2 contains a reference to an existing resource in the resource list?
-    '"Tasks which do not start with a verb"
-    '"Lags"
-    '"Leads "
-
-    '
-    ' report the % of tasks with more than one resource assigned. too many of these are we go cray cray.
-    ' report tasks with specific assigned calendars Task Calendar column
-    
-    'Ideas
-    ' Somehow calculate the amount of float allowed after critical chains by representing the float as a special type of task
-    ' Monitor the target date for an activity that is actually free to move. Canary in the coalmine'  e.g. date in date1 is target.
-    ' "LOE activities are left hanging see schedule practice standard p28 also LOE tasks
-    '   http://www.tensixconsulting.com/2013/05/more-about-level-of-effort-tasks-in-microsoft-project/ does some funky footwork and predecessor article.
-    '   for LOE add ability to have a task that automatically resizes to fit between it single milestone predecessor and single milestone successor flag it somehow.
-    
-    ' ===============================
-    ' Ideas for other helper routines
-    ' Convert planning package into summary with start/ finish and two sub task that are all connected up.  planning paackage dependencies
-    '   get moved to start/ finish so that before and after the :-) check works!
-    
-    ' Convert subnet into one task reverse of above, perserving external dependencies.
-    
     
     PermanentIDFieldID = FieldIDofCustomField("Permanent ID", "Number")
     
@@ -556,10 +476,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
         End If
     
         
-        'ActiveProject.tasks(Val(TaskID)).Name
-        
-        
-        
+       
         For Each tsk In ActiveProject.tasks
     
             If tsk.Summary Then
@@ -621,7 +538,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
             
             If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 10) < 0 And IncludedOf(10) Then
                 If tsk.PredecessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0 Or tsk.ConstraintType = pjSNET) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 5) = "Start") Then 'ignore external milestones and ignore
-                'If tsk.PredecessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0) And tsk.Milestone) Then   'ignore external milestones and ignore
                     numOf(10) = numOf(10) + 1
                     If numOf(10) < maxpertestplus1 Then details(10) = details(10) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
                 End If
@@ -629,7 +545,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
         
             If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 11) < 0 And IncludedOf(11) Then
                 If tsk.SuccessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0 Or tsk.ConstraintType = pjFNLT Or tsk.ID = StatusDateMilestoneID) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 6) = "Finish") Then
-                'If tsk.SuccessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0) And tsk.Milestone) Then
                     numOf(11) = numOf(11) + 1
                     If numOf(11) < maxpertestplus1 Then details(11) = details(11) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
                 End If
@@ -649,11 +564,9 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                 startCount = 0
                 finishCount = 0
                 For Each chld In tsk.OutlineChildren
-                    'MsgBox "1|" & chld.Name & "| " & "|Start " & tsk.Name & "|"
                     If chld.Milestone And chld.Name = "Start " & tsk.Name Then
                         startFound = True
                         StartMilestoneID.Add tsk.ID, chld.ID
-                        'MsgBox "2|" & chld.Name & "| " & "|Start " & tsk.Name & "|"
                     End If
                     If chld.Milestone And chld.Name = "Finish " & tsk.Name Then
                         FinishMilestoneID.Add tsk.ID, chld.ID
@@ -729,11 +642,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
             testNo = 27
             If tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(27) Then
                 If tsk.OutlineChildren.Count < 4 Then
-                'nonMilestoneChildren = 0
-                'For Each chld In tsk.OutlineChildren
-                '    If Not chld.Milestone Then nonMilestoneChildren = nonMilestoneChildren + 1
-                'Next
-                'If nonMilestoneChildren < 2 Then
                     numOf(testNo) = numOf(testNo) + 1
                     If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "    " & tsk.Name & "[" & tsk.ID & "]" & htmlCrLf
                 End If
@@ -1197,9 +1105,7 @@ continue2332:
     message = message & "</div>"
     
    
-    'If details <> "" Then details = "Details" & htmlCrLf & details
-    
-    
+   
     preamble = "<h1>" & ReportName & " </h1> " & "<p><small><b>v</b>" & ver & "<b> For:</b> " & ActiveProject.FullName & htmlCrLf & "<b>Status Date is</b> " & ReallyStatusDate() & " <b>Created at:</b> " & Now
     If PermanentIDFieldID <> 0 Then
         preamble = preamble & htmlCrLf & "<b>Next unused Permanent ID:</b> " & MaxPermID + 1
@@ -1216,7 +1122,6 @@ continue2332:
     
     Set CheckAnalyse = Res
     
-'    MsgBox message, msgStyle, "Health Check"
 End Function
 
 
@@ -1228,12 +1133,10 @@ Sub AddDeleteImplicitDependencies(AddorDelete As String, StartMilestoneID As Dic
     Dim tsk As Task
     Dim Sibling As Task
     Set Lookaside = New Dictionary ' Reset the calculation cache
-    'For Each SummaryItemID In StartMilestoneID
     For Each tsk In ActiveProject.tasks
         If tsk.Summary Then
             Set StartTsk = ActiveProject.tasks(StartMilestoneID(tsk.ID))
             Set FinishTsk = ActiveProject.tasks(FinishMilestoneID(tsk.ID))
-            'MsgBox Tsk.Name & "=>" & StartTsk.Name
             For Each Sibling In tsk.OutlineChildren
                 If Sibling.ID <> StartMilestoneID(tsk.ID) And Sibling.ID <> FinishMilestoneID(tsk.ID) Then
                     If Sibling.Summary Then
@@ -1265,18 +1168,9 @@ Private Sub DeleteRedundantDependencies()
     Dim tsk As Task
     Dim tsk2 As Task
     Set Lookaside = New Dictionary ' Reset the calculation cache
-    'For Each SummaryItemID In StartMilestoneID
     For Each tsk In ActiveProject.tasks
         If Not tsk.Summary And tsk.SuccessorTasks.Count > 0 Then
-' debugcode
-'If Tsk.ID = 6 Then
-'    MsgBox "a"
-'End If
             For Each tsk2 In tsk.SuccessorTasks
-' debug code
-'If tsk2.ID = 10 Then
-'    MsgBox "b"
-'End If
                 Set thisSuccessor = New Dictionary
                 thisSuccessor.Add Str(tsk2.ID), Str(tsk2.ID)
                 Set successorsLessOne = Subtract(tasks_set(tsk.SuccessorTasks), thisSuccessor)
@@ -1289,9 +1183,6 @@ Private Sub DeleteRedundantDependencies()
         End If
     Next
 End Sub
-
-        ' assumes that no dependencies on summaries
-
 
 Function ReallyStatusDate()
 If ActiveProject.StatusDate = "NA" Then
@@ -1458,33 +1349,6 @@ Next
 Lookaside.Add lookasidekey, Res
 Set successors_set = Res
 End Function
-'Function dependenciesfs0lag_set(taskids As Dictionary, Optional recursive As Boolean = True) As Dictionary
-'Dim lookasidekey As String
-'lookasidekey = "dependenciesfs0lag_set" & Join(taskids.Keys(), "#") & "#" & Str(recursive)
-'If Lookaside.Exists(lookasidekey) Then
-'    Set successors_set = Lookaside.Item(lookasidekey)
-'    Exit Function
-'End If
-
-'Dim res As New Dictionary
-'Dim subres As Dictionary
-'Dim x As Variant
-
-'Dim tid As Variant
-'Dim t As Task
-'For Each tid In taskids
-'    Set t = ActiveProject.tasks(Val(tid))
-'    If t.taskdependencies.Count > 0 And recursive Then
-'        Set subres = dependenciesfs0lag_set(dependentfs0lagtasks_set(t.taskdependencies))
-'        For Each x In subres
-'            If Not res.Exists(x) Then res.Add x, x
-'        Next
-'    End If
-'    If Not t.Summary And Not res.Exists(Str(t.ID)) Then res.Add Str(t.ID), Str(t.ID)
-'Next
-'Lookaside.Add lookasidekey, res
-'Set dependenciesfs0lag_set = res
-'End Function
 
 Function sibling_set(tsk As Task) As Dictionary
 Dim lookasidekey As String
@@ -1585,18 +1449,6 @@ Function printkeys(col As Dictionary)
         Debug.Print "'" & x & "'"
     Next
 End Function
-
-
-
-'Public Function Contains(col As Dictionary, key As Variant) As Boolean
-'Dim obj As Variant
-'On Error GoTo err
-'    Contains = True
-'    obj = col(key)
-'    Exit Function
-'err:
-'    Contains = False
-'End Function
 
 Function Intersect(col1 As Dictionary, col2 As Dictionary) As Dictionary
 Dim item1 As Variant
