@@ -16,6 +16,9 @@ Global Const ver = "1.0.124"
 Global ActualResultsFieldID As Long
 Global ExpectedResultsFieldId As Long
 Global ActualAsExpectedFieldID As Long
+Global Testing As Boolean
+Global LowID As Long
+Global HighID As Long
 Dim Lookaside As Dictionary
 Const htmlCrLf = "<br />"
 Const minPerDay = 60 * 8
@@ -93,8 +96,6 @@ End Sub
 Sub ScheduleHealthCheck()
 Dim SubPlans As Dictionary
 Dim Res As Dictionary
-Dim LowID As Long
-Dim HighID As Long
 Dim i As Long
 Dim tsk As Task
 Dim tskID As Variant
@@ -124,7 +125,8 @@ If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedF
             Else
                 HighID = Val(SubPlans.Keys(i + 1)) - 1
             End If
-            Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check", LowID, HighID, True)
+            Testing = True
+            Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check")
         Next
         ' Compare Actual with Expected updating results
         For Each tsk In ActiveProject.tasks
@@ -137,7 +139,10 @@ If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedF
     End If
     MsgBox "Test Mode - no report was be created.  Check for 'FAIL' results in 'Actual As Expected' field"
 Else
-    Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check", 1, ActiveProject.tasks.Count, False)
+    Testing = False
+    LowID = 1
+    HighID = ActiveProject.tasks.Count
+    Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check")
     
     Dim chkPathName As String
     If Res("Linked to Disk File") Then
@@ -179,7 +184,22 @@ Sub LogErrorConfig(testNo As Integer, Setting As String)
     details(testNo) = details(testNo) & "    " & Setting & htmlCrLf
     ' There is currently no testing version of this.
 End Sub
-Private Function CheckAnalyse(IncludedTests As String, ReportName As String, LowID As Long, HighID As Long, Testing As Boolean) As Dictionary
+Sub LogErrorProject(testNo As Integer, message As String)
+    ' Default to logging project wide issues against the Level 1 Summary Component.
+    LogErrorSingleTask testNo, ActiveProject.tasks(LowID), message
+End Sub
+Sub LogErrorSingleTask(testNo As Integer, tsk As Task, message As String)
+    If Testing Then
+        tsk.SetField ActualResultsFieldID, tsk.GetField(ActualResultsFieldID) & "," & Str(testNo)
+    Else
+        Dim buildMsg As String
+        numOf(testNo) = numOf(testNo) + 1
+        buildMsg = message
+        buildMsg = Replace(buildMsg, "!numOf(testNo)!", Str(numOf(testNo)))
+        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & buildMsg & htmlCrLf
+    End If
+End Sub
+Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As Dictionary
 ' IncludedTests "All" = all, otherwise a comma separated list of tests to perform
     Application.StatusBar = "Schedule Health Check ..."
     Dim tsk As Task
@@ -459,17 +479,16 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String, Low
     'Prior to analysis move the "Status Date Milestone to the ReallyStatusDate().
     
     For Each tsk In ActiveProject.tasks
-        If tsk.ID >= LowID And tsk.ID <= HighID Then
-            testNo = 40
-            If tsk Is Nothing Then
-                numOf(testNo) = numOf(testNo) + 1
-                If Testing Then ActiveProject.tasks(LowID).SetField ActualResultsFieldID, ActiveProject.tasks(LowID).GetField(ActualResultsFieldID) & "," & Str(testNo)
-                If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "Blank task #" & numOf(testNo) & " found." & htmlCrLf
-            ElseIf Trim(tsk.Name) = "" Then
-                numOf(testNo) = numOf(testNo) + 1
-                If Testing Then tsk.SetField ActualResultsFieldID, tsk.GetField(ActualResultsFieldID) & "," & Str(testNo)
-                If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "Blank task #" & numOf(testNo) & " found." & htmlCrLf
-            End If
+        testNo = 40
+        If tsk Is Nothing Then
+            LogErrorProject testNo, "Blank task #!numOf(testNo)! found."
+            'numOf(testNo) = numOf(testNo) + 1
+            'If Testing Then ActiveProject.tasks(LowID).SetField ActualResultsFieldID, ActiveProject.tasks(LowID).GetField(ActualResultsFieldID) & "," & Str(testNo)
+            'If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "Blank task #" & numOf(testNo) & " found." & htmlCrLf
+        ElseIf Trim(tsk.Name) = "" And tsk.ID >= LowID And tsk.ID <= HighID Then
+            numOf(testNo) = numOf(testNo) + 1
+            If Testing Then tsk.SetField ActualResultsFieldID, tsk.GetField(ActualResultsFieldID) & "," & Str(testNo)
+            If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & "Blank task #" & numOf(testNo) & " found." & htmlCrLf
         End If
     Next
     
@@ -1024,7 +1043,7 @@ continue2332:
     
     End If
     
-    If numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 And numOf(51) = 0 And numOf(52) = 0 Then
+    If numOf(40) = 0 And numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 And numOf(51) = 0 And numOf(52) = 0 Then
     
         For Each tsk In ActiveProject.tasks
             If tsk.ID >= LowID And tsk.ID <= HighID Then
