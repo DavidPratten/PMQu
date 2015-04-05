@@ -297,8 +297,8 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     descOf(4) = "Task with elapsed time > 30 days" ' Item.
     sevOf(4) = sevWarning
     bandOf(4) = 60
-    descOf(5) = "Milestone with constraint type other than ASAP, MSO, SNET, or FNLT" ' Item.  ' Harris 2010 c11
-    sevOf(5) = sevWarning
+    'descOf(5) = "Milestone with constraint type other than ASAP, MSO, SNET, or FNLT" ' Item.  ' Harris 2010 c11
+    'sevOf(5) = sevWarning
     bandOf(5) = 60
     descOf(6) = "Task with constraint type other than ASAP. Use Deadlines or put constraint on a milestone" ' Item.
     bandOf(6) = 60
