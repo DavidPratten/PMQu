@@ -137,21 +137,20 @@ If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedF
             End If
         Next
     End If
-    MsgBox "Test Mode - no report was be created.  Check for 'FAIL' results in 'Actual As Expected' field"
 Else
     Testing = False
     LowID = 1
     HighID = ActiveProject.tasks.Count
     Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check")
-    
-    Dim chkPathName As String
-    If Res("Linked to Disk File") Then
-        chkPathName = CreateReport("Check", Res("message"))
-        OpenReport (chkPathName)
-    Else
-        MsgBox "The project must be first saved to disk."
-    End If
 End If
+Dim chkPathName As String
+If Res("Linked to Disk File") Then
+    chkPathName = CreateReport("Check", Res("message"))
+    OpenReport (chkPathName)
+Else
+    MsgBox "The project must be first saved to disk."
+End If
+
 End Sub
 
 Private Function CreateReport(Suffix As String, message As String) As String
@@ -202,18 +201,17 @@ Sub LogErrorTask(testNo As Integer, tsk As Task, message As String, Optional tsk
         If Not tsk2 Is Nothing Then
             tsk2.SetField ActualResultsFieldID, tsk2.GetField(ActualResultsFieldID) & "," & Str(testNo)
         End If
-    Else
-        If message <> "" Then
-            Dim buildMsg As String
-            numOf(testNo) = numOf(testNo) + 1
-            buildMsg = message
-            buildMsg = Replace(buildMsg, "!numOf(testNo)!", Str(numOf(testNo)))
-            buildMsg = Replace(buildMsg, "!NameID!", tsk.Name & "[" & Trim(Str(tsk.ID)) & "]")
-            If Not tsk2 Is Nothing Then
-                buildMsg = Replace(buildMsg, "!NameID2!", tsk2.Name & "[" & Trim(Str(tsk2.ID)) & "]")
-            End If
-            If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & buildMsg & htmlCrLf
+    End If
+    numOf(testNo) = numOf(testNo) + 1
+    If message <> "" Then
+        Dim buildMsg As String
+        buildMsg = message
+        buildMsg = Replace(buildMsg, "!numOf(testNo)!", Str(numOf(testNo)))
+        buildMsg = Replace(buildMsg, "!NameID!", tsk.Name & "[" & Trim(Str(tsk.ID)) & "]")
+        If Not tsk2 Is Nothing Then
+            buildMsg = Replace(buildMsg, "!NameID2!", tsk2.Name & "[" & Trim(Str(tsk2.ID)) & "]")
         End If
+        If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & buildMsg & htmlCrLf
     End If
 End Sub
 Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As Dictionary
@@ -1127,6 +1125,9 @@ continue2332:
         preamble = preamble & htmlCrLf & "<b>Next unused Permanent ID:</b> " & MaxPermID + 1
     End If
     preamble = preamble & "</small></p>"
+    If Testing Then
+        preamble = preamble & htmlCrLf & "<p><b>TESTING MODE SEE ALSO THE 'ACTUAL AS EXPECTED' COLUMN</b></p> "
+    End If
     
     message = preamble & message
     
