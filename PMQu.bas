@@ -606,7 +606,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                 End If
             
                 If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 11) < 0 And IncludedOf(11) Then
-                    If tsk.SuccessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0 Or tsk.ConstraintType = pjFNLT Or tsk.ID = StatusDateMilestoneID) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 6) = "Finish") Then
+                    If tsk.SuccessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjFNLT Or tsk.ID = StatusDateMilestoneID) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 6) = "Finish") Then 'ignore external milestones AND the origin "Finish" Milestone
                         LogErrorTask 11, tsk, "!NameID!"
                     End If
                 End If
