@@ -600,7 +600,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                 End If
                 
                 If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 10) < 0 And IncludedOf(10) Then
-                    If tsk.PredecessorTasks.Count = 0 And Not ((InStr(tsk.Name, "External") <> 0 Or tsk.ConstraintType = pjSNET) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 5) = "Start") Then 'ignore external milestones and ignore
+                    If tsk.PredecessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjSNET) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 5) = "Start") Then 'ignore external milestones AND the origin "Start" Milestone
                         LogErrorTask 10, tsk, "!NameID!"
                     End If
                 End If
@@ -998,7 +998,6 @@ continue2332:
     
     message = ""
     
-
     ' #16 is a global test and the goal is 1
     If numOf(16) = 1 Then
         ClearActualResults 16
