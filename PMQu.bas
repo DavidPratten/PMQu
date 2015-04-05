@@ -22,7 +22,7 @@ Global HighID As Long
 Dim Lookaside As Dictionary
 Const htmlCrLf = "<br />"
 Const minPerDay = 60 * 8
-Const maxTest = 52
+Const maxTest = 53
 Const maxpertestplus1 = 100 ' 4 of on screen message
 Dim numOf() As Integer
 Dim details() As String
@@ -401,6 +401,8 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(51) = 40
     descOf(52) = "Finish Milestone has a predecessor which is not a sibling"
     bandOf(52) = 40
+    descOf(53) = "Milestone must be zero Duration"
+    bandOf(53) = 20
     
     
     Res.Add "Linked to Disk File", (UBound(Split(ActiveProject.FullName, ".")) > 0)
@@ -718,6 +720,13 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                 testNo = 30
                 If tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
                     If tsk.PercentComplete <> 0 And tsk.PercentComplete <> 100 Then
+                        LogErrorTask testNo, tsk, "!NameID!"
+                    End If
+                End If
+           
+                testNo = 53
+                If tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
+                    If tsk.Duration <> 0 Then
                         LogErrorTask testNo, tsk, "!NameID!"
                     End If
                 End If
