@@ -19,6 +19,10 @@ Global ActualAsExpectedFieldID As Long
 Dim Lookaside As Dictionary
 Const htmlCrLf = "<br />"
 Const minPerDay = 60 * 8
+Const maxTest = 52
+Const maxpertestplus1 = 100 ' 4 of on screen message
+Dim numOf() As Integer
+Dim details() As String
 Private Function FieldIDofCustomField(CustomFieldName As String, CustomFieldType As String) As Long
   
   Dim i As Long
@@ -94,10 +98,15 @@ Dim HighID As Long
 Dim i As Long
 Dim tsk As Task
 Dim tskID As Variant
+
+' Initialise Global Variables.
 ActualResultsFieldID = FieldIDofCustomField("Actual Results", "Text")
 ExpectedResultsFieldId = FieldIDofCustomField("Expected Results", "Text")
 ActualAsExpectedFieldID = FieldIDofCustomField("Actual As Expected", "Text")
+ReDim numOf(maxTest)
+ReDim details(maxTest)
 Set Lookaside = New Dictionary
+
 If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedFieldID > 0 Then ' this is a test file
     Set SubPlans = SubPlans_set()
     If SubPlans.Count = 0 Then
@@ -165,6 +174,11 @@ Private Function CreateReport(Suffix As String, message As String) As String
     oFile.Close
     CreateReport = chkPathName
 End Function
+Sub LogErrorConfig(testNo As Integer, Setting As String)
+    numOf(testNo) = numOf(testNo) + 1
+    details(testNo) = details(testNo) & "    " & Setting & htmlCrLf
+    ' There is currently no testing version of this.
+End Sub
 Private Function CheckAnalyse(IncludedTests As String, ReportName As String, LowID As Long, HighID As Long, Testing As Boolean) As Dictionary
 ' IncludedTests "All" = all, otherwise a comma separated list of tests to perform
     Application.StatusBar = "Schedule Health Check ..."
@@ -172,9 +186,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String, Low
     Dim tsk2 As Task
     Dim message As String
     Dim preamble As String
-    Const maxTest = 52
-    Const maxpertestplus1 = 100 ' 4 of on screen message
-    Dim numOf(maxTest) As Integer
     Dim descOf(maxTest) As String
     Dim sevOf(maxTest) As Integer
     Dim bandOf(maxTest) As Integer
@@ -187,7 +198,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String, Low
     Dim i As Integer
     Dim j As Integer
     Dim TotalFound As Integer
-    Dim details(maxTest) As String
     Dim startFound As Boolean
     Dim startCount As Integer
     Dim finishFound As Boolean
@@ -389,64 +399,49 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String, Low
     testNo = 36
     If IncludedOf(testNo) Then
         If ActiveProject.NewTasksCreatedAsManual Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(1) & htmlCrLf
+            LogErrorConfig testNo, settings36(1)
         End If
         If Not ActiveProject.ScheduleFromStart Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(2) & htmlCrLf
+            LogErrorConfig testNo, settings36(2)
         End If
         If Not ActiveProject.DefaultDurationUnits = pjDay Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(3) & htmlCrLf
+            LogErrorConfig testNo, settings36(3)
         End If
         If Not ActiveProject.DefaultWorkUnits = pjHour Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(4) & htmlCrLf
+            LogErrorConfig testNo, settings36(4)
         End If
         If Not ActiveProject.DefaultTaskType = pjFixedUnits Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(5) & htmlCrLf
+            LogErrorConfig testNo, settings36(5)
         End If
         If ActiveProject.DefaultEffortDriven Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(6) & htmlCrLf
+            LogErrorConfig testNo, settings36(6)
         End If
         If ActiveProject.AutoLinkTasks Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(7) & htmlCrLf
+            LogErrorConfig testNo, settings36(7)
         End If
         If ActiveProject.AutoSplitTasks Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(8) & htmlCrLf
+            LogErrorConfig testNo, settings36(8)
         End If
         If ActiveProject.ManuallyScheduledTasksAutoRespectLinks Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(9) & htmlCrLf
+            LogErrorConfig testNo, settings36(9)
         End If
         If ActiveProject.HonorConstraints Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(10) & htmlCrLf
+            LogErrorConfig testNo, settings36(10)
         End If
         If Not ActiveProject.ShowEstimatedDuration Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(11) & htmlCrLf
+            LogErrorConfig testNo, settings36(11)
         End If
         If Not ActiveProject.NewTasksEstimated Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(12) & htmlCrLf
+            LogErrorConfig testNo, settings36(12)
         End If
         If ActiveProject.KeepTaskOnNearestWorkingTimeWhenMadeAutoScheduled Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(13) & htmlCrLf
+            LogErrorConfig testNo, settings36(13)
         End If
         If ActiveProject.ShowTaskWarnings Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(14) & htmlCrLf
+            LogErrorConfig testNo, settings36(14)
         End If
         If ActiveProject.ShowTaskSuggestions Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings36(15) & htmlCrLf
+            LogErrorConfig testNo, settings36(15)
         End If
         
         
@@ -457,8 +452,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String, Low
     testNo = 47
     If IncludedOf(testNo) Then
         If Not ActiveProject.ScheduleFromStart Then
-            numOf(testNo) = numOf(testNo) + 1
-            details(testNo) = details(testNo) & "    " & settings47(1) & htmlCrLf
+            LogErrorConfig testNo, settings47(1)
         End If
         
     End If
