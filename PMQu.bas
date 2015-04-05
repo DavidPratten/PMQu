@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.125"
+Global Const ver = "1.0.126"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -187,19 +187,21 @@ Sub LogErrorProject(testNo As Integer, message As String)
     ' Default to logging project wide issues against the Level 1 Summary Component.
     LogErrorTask testNo, ActiveProject.tasks(LowID), message
 End Sub
-Sub ClearActualResults(ID As Integer)
+Sub ClearActualResults(testNo As Integer)
     Dim tsk As Task
     For Each tsk In ActiveProject.tasks
-        If Testing Then tsk.SetField ActualResultsFieldID, Replace(tsk.GetField(ActualResultsFieldID), "," & Str(ID), "")
+        If Testing And tsk.ID >= LowID And tsk.ID <= HighID Then
+            tsk.SetField ActualResultsFieldID, Replace(tsk.GetField(ActualResultsFieldID), "{" & Trim(Str(testNo)) & "}", "")
+        End If
     Next
-    numOf(ID) = 0
-    details(ID) = ""
+    numOf(testNo) = 0
+    details(testNo) = ""
 End Sub
 Sub LogErrorTask(testNo As Integer, tsk As Task, message As String, Optional tsk2 As Task = Nothing)
     If Testing Then
-        tsk.SetField ActualResultsFieldID, tsk.GetField(ActualResultsFieldID) & "," & Str(testNo)
+        tsk.SetField ActualResultsFieldID, tsk.GetField(ActualResultsFieldID) & "{" & Trim(Str(testNo)) & "}"
         If Not tsk2 Is Nothing Then
-            tsk2.SetField ActualResultsFieldID, tsk2.GetField(ActualResultsFieldID) & "," & Str(testNo)
+            tsk2.SetField ActualResultsFieldID, tsk2.GetField(ActualResultsFieldID) & "{" & Trim(Str(testNo)) & "}"
         End If
     End If
     numOf(testNo) = numOf(testNo) + 1
