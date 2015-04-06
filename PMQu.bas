@@ -22,7 +22,7 @@ Global HighID As Long
 Dim Lookaside As Dictionary
 Const htmlCrLf = "<br />"
 Const minPerDay = 60 * 8
-Const maxTest = 55
+Const maxTest = 53
 Const maxpertestplus1 = 100 ' 4 of on screen message
 Dim numOf() As Integer
 Dim details() As String
@@ -303,7 +303,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     descOf(4) = "Task with elapsed time > 30 days" ' Item.
     sevOf(4) = sevWarning
     bandOf(4) = 60
-    bandOf(5) = 60
     descOf(6) = "Task with constraint type other than ASAP. Use Deadlines or put constraint on a milestone" ' Item.
     bandOf(6) = 60
     descOf(7) = "Summary with constraint type other than ASAP" ' Item.
@@ -384,15 +383,11 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     descOf(50) = "Task is Effort Driven." ' Item.
     bandOf(50) = 50
     descOf(51) = "Start Milestone has a successor which is not a sibling"
-    bandOf(51) = 40
+    bandOf(51) = 70
     descOf(52) = "Finish Milestone has a predecessor which is not a sibling"
-    bandOf(52) = 40
+    bandOf(52) = 70
     descOf(53) = "Milestone must be zero Duration"
     bandOf(53) = 20
-    descOf(54) = "Really? Invalid Successor"
-    bandOf(54) = 40
-    descOf(55) = "Really? Invalid Predecessor"
-    bandOf(55) = 40
     
     
     Res.Add "Linked to Disk File", (UBound(Split(ActiveProject.FullName, ".")) > 0)
@@ -782,26 +777,6 @@ continue2332:
                         
                     Next
                 End If
-               testNo = 54
-               If IncludedOf(testNo) And StartMilestones.Exists(tsk.ID) Then
-                   Set cola = Subtract(tasks_set(tsk.SuccessorTasks), start_successor_set(tsk, StartMilestoneID, FinishMilestones))
-                   If cola.Count() > 0 Then
-                       For Each TaskID In cola.Keys
-                           LogErrorTask testNo, tsk, "!NameID! has invalid successor dependency to !NameID2!.", ActiveProject.tasks(Val(TaskID))
-                       Next
-                   End If
-               End If
-    
-               testNo = 55
-               If IncludedOf(testNo) And FinishMilestones.Exists(tsk.ID) Then
-                   Set cola = Subtract(tasks_set(tsk.PredecessorTasks), finish_predecessor_set(tsk, FinishMilestoneID, StartMilestones))
-                   If cola.Count() > 0 Then
-                       For Each TaskID In cola.Keys
-                            LogErrorTask testNo, tsk, "!NameID! has invalid predecessor dependency from !NameID2!.", ActiveProject.tasks(Val(TaskID))
-                       Next
-                   End If
-               End If
-       
             End If
         End If
     Next tsk
