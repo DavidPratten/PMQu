@@ -210,9 +210,9 @@ Sub LogErrorTask(testNo As Integer, tsk As Task, message As String, Optional tsk
         Dim buildMsg As String
         buildMsg = message
         buildMsg = Replace(buildMsg, "!numOf(testNo)!", Str(numOf(testNo)))
-        buildMsg = Replace(buildMsg, "!NameID!", tsk.Name & "[" & Trim(Str(tsk.ID)) & "]")
+        buildMsg = Replace(buildMsg, "!NameID!", "<em>" & tsk.Name & "</em>[" & Trim(Str(tsk.ID)) & "]")
         If Not tsk2 Is Nothing Then
-            buildMsg = Replace(buildMsg, "!NameID2!", tsk2.Name & "[" & Trim(Str(tsk2.ID)) & "]")
+            buildMsg = Replace(buildMsg, "!NameID2!", "<em>" & tsk2.Name & "</em>[" & Trim(Str(tsk2.ID)) & "]")
         End If
         If numOf(testNo) < maxpertestplus1 Then details(testNo) = details(testNo) & buildMsg & htmlCrLf
     End If
@@ -809,9 +809,8 @@ continue2332:
                         If numOf(10) = 0 And numOf(11) = 0 Then
                             Set cola = Subtract(descendents_set_except(tasks_set(tsk.OutlineChildren), Str(chld.ID), False), successors_set(tasks_set(chld.SuccessorTasks)))
                             If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 23) < 0 And IncludedOf(23) Then
-                                LogErrorTask 23, tsk, ""
                                 For Each TaskID In cola.Keys
-                                    LogErrorTask 23, ActiveProject.tasks(Val(TaskID)), chld.Name & "[" & chld.ID & "] is not the predecessor of !NameID!"
+                                    LogErrorTask 23, ActiveProject.tasks(Val(TaskID)), "!NameID2! is not the predecessor of !NameID!", chld
                                 Next
                             End If
                         End If
