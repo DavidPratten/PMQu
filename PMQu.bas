@@ -821,7 +821,7 @@ continue2332:
                 ' Check that distant dependencies are from an interim milestone.
                 If tsk.SuccessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 45) < 0 And IncludedOf(45) Then
                     For Each tsk2 In tsk.SuccessorTasks
-                        If tsk.OutlineParent.ID <> tsk2.OutlineParent.ID And tsk.ID > tsk2.ID And Not (tsk.Milestone Or tsk2.Milestone) Then
+                        If tsk.OutlineParent.ID <> tsk2.OutlineParent.ID And Not (tsk.Milestone Or tsk2.Milestone) Then
                             LogErrorTask 45, tsk, "!NameID! distant successor dependency to !NameID2! should be to, or from, a Milestone that represents the interim deliverable.", tsk2
                         End If
                     Next
