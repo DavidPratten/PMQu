@@ -368,8 +368,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(41) = 30
     descOf(42) = "Only this Summary Task's Finish Milestone's name may begin with 'Finish '" ' WBS/PBS.
     bandOf(42) = 30
-    descOf(43) = "Dependency may not be with self, not with parent Tasks, nor with child Tasks" ' Network.
-    bandOf(43) = 40
     descOf(44) = "Task with duplicate 'Permanent ID' field" ' Item.
     bandOf(44) = 20
     'descOf(45) = "Use an Interim Output Milestone here and make distant tasks dependent on the Milestone." ' Network.
@@ -815,89 +813,7 @@ continue2332:
     If ActiveProject.DisplayProjectSummaryTask And IncludedOf(testNo) Then
         LogErrorProject testNo, ""
     End If
-    
-    
-    If numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 Then   ' Only perform this test if otherwise all OK.
-        
-    
-        testNo = 43
-        
-        If IncludedOf(testNo) Then
-        
-            Dim InError As Boolean
-            Dim Taskto As Task
-            Dim Taskfrom As Task
-            Dim WBSfrom As Integer
-            Dim WBSto As Integer
-            Dim DepList As New Dictionary
-            Dim DepCount As Integer
-            Dim DepKey As Variant
-            Dim FromToStartFinish As Boolean
-            Const iWBSfrom = 0
-            Const iWBSto = 1
-            Const iTaskfromID = 2
-            Const iTasktoID = 3
-            DepCount = 0
-            For Each Taskfrom In ActiveProject.tasks
-                If Taskfrom.ID >= LowID And Taskfrom.ID <= HighID Then
-                    For Each Taskto In Taskfrom.SuccessorTasks
-                        ' translate Start / Finish Milestones to be represented by their Summary Task
-                        FromToStartFinish = False
-                        If StartMilestones.Exists(Taskfrom.ID) Then
-                            WBSfrom = StartMilestones(Taskfrom.ID)
-                            FromToStartFinish = True
-                        ElseIf FinishMilestones.Exists(Taskfrom.ID) Then
-                            WBSfrom = FinishMilestones(Taskfrom.ID)
-                            FromToStartFinish = True
-                        Else
-                            WBSfrom = Taskfrom.ID
-                        End If
-                        If StartMilestones.Exists(Taskto.ID) Then
-                            WBSto = StartMilestones(Taskto.ID)
-                            FromToStartFinish = True
-                        ElseIf FinishMilestones.Exists(Taskto.ID) Then
-                            WBSto = FinishMilestones(Taskto.ID)
-                            FromToStartFinish = True
-                        Else
-                            WBSto = Taskto.ID
-                        End If
-                        If FromToStartFinish Then
-                            DepCount = DepCount + 1
-                            DepList.Add DepCount, Array(WBSfrom, WBSto, Taskfrom.ID, Taskto.ID)
-                        End If
-                    Next
-                End If
-            Next
-            For Each DepKey In DepList
-                InError = False
-                If DepList(DepKey)(iWBSfrom) = DepList(DepKey)(iWBSto) Then ' can't depend on itself
-                    InError = True
-                ElseIf wbs_descendents_set(ActiveProject.tasks(DepList(DepKey)(iWBSfrom))).Exists(Str(DepList(DepKey)(iWBSto))) Then 'if wbsto is a descendent of wbsfrom
-                    InError = InError Or StartMilestoneID(DepList(DepKey)(iWBSfrom)) <> DepList(DepKey)(iTaskfromID) 'allowable if from  start milestone
-                    If ActiveProject.tasks(DepList(DepKey)(iWBSto)).Summary Then
-                        InError = InError Or StartMilestoneID(DepList(DepKey)(iWBSto)) <> DepList(DepKey)(iTasktoID) 'allowable if to  start milestone
-                        InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel + 1 <> ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel ' immediate = one level different
-                    Else
-                        InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel <> ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel 'immediate means same level
-                    End If
-                ElseIf wbs_descendents_set(ActiveProject.tasks(DepList(DepKey)(iWBSto))).Exists(Str(DepList(DepKey)(iWBSfrom))) Then 'if wbsfrom is a descendent of wbsto
-                    InError = InError Or FinishMilestoneID(DepList(DepKey)(iWBSto)) <> DepList(DepKey)(iTasktoID)  ' allowable if to finish milestone
-                    If ActiveProject.tasks(DepList(DepKey)(iWBSfrom)).Summary Then
-                        InError = InError Or FinishMilestoneID(DepList(DepKey)(iWBSfrom)) <> DepList(DepKey)(iTaskfromID) ' allowable if from finish milestone
-                        InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel + 1 <> ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel ' immediate = one level different
-                    Else
-                        InError = InError Or ActiveProject.tasks(DepList(DepKey)(iTasktoID)).OutlineLevel <> ActiveProject.tasks(DepList(DepKey)(iTaskfromID)).OutlineLevel 'immediate means same level
-                    End If
-                End If
-                If InError Then
-                    LogErrorTask testNo, ActiveProject.tasks(DepList(DepKey)(iTaskfromID)), "!NameID! has invalid successor dependency to !NameID2!.", ActiveProject.tasks(DepList(DepKey)(iTasktoID))
-                End If
-            Next DepKey
-        End If
-        
 
-    End If
-    
     
     End If
     
