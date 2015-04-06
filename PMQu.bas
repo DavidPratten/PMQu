@@ -303,8 +303,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     descOf(4) = "Task with elapsed time > 30 days" ' Item.
     sevOf(4) = sevWarning
     bandOf(4) = 60
-    'descOf(5) = "Milestone with constraint type other than ASAP, MSO, SNET, or FNLT" ' Item.  ' Harris 2010 c11
-    'sevOf(5) = sevWarning
     bandOf(5) = 60
     descOf(6) = "Task with constraint type other than ASAP. Use Deadlines or put constraint on a milestone" ' Item.
     bandOf(6) = 60
@@ -324,10 +322,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(13) = 30
     descOf(14) = "Milestone with Resource Assignments" ' Item.
     bandOf(14) = 50
-    'descOf(15) = "Start Milestone with no sibling successors" ' Network.
-    'descOf(16) = "Start Milestone with no non-sibling predecessors" ' Network.
-    'descOf(17) = "Finish Milestone with no sibling predecessors" ' Network.
-    'descOf(18) = "Finish Milestone with no non-sibling successors" ' Network.
     descOf(19) = "Tasks with Duplicate Names" ' Item.
     bandOf(19) = 20
     descOf(20) = "Tasks with sub-day duration" ' Item.
@@ -362,8 +356,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(32) = 30
     descOf(33) = "Project Summary Task is visible" ' WBS/PBS.
     bandOf(33) = 10
-'    descOf(34) = "Project does not contain a 'Status Date Milestone' at Outline Level 1 with Start No Earlier Than constraint" ' Item.
-'    sevOf(34) = sevWarning
     descOf(35) = "A successor of Status Date Milestone has less than 10 days slack" ' Scheduling.
     sevOf(35) = sevWarning
     bandOf(35) = 60
@@ -784,18 +776,6 @@ continue2332:
             If tsk.Summary Then
                 For Each chld In tsk.OutlineChildren
                     If IsWBSMilestone("Start", chld) Then
-                        ' Check 15
-                        'Set cola = Intersect(descendents_set(tasks_set(chld.SuccessorTasks)), descendents_set(tasks_set(tsk.OutlineChildren)))
-                        'If cola.Count() = 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 15) < 0 And IncludedOf(15) Then
-                        '   numOf(15) = numOf(15) + 1
-                        '    If numOf(15) < maxpertestplus1 Then details(15) = details(15) & "    " & chld.name & "[" & chld.ID & "] has no peer successors" & htmlCrLf
-                        'End If
-                        ' Check 16
-                        'Set cola = Subtract(descendents_set(tasks_set(chld.PredecessorTasks)), descendents_set(tasks_set(tsk.OutlineChildren)))
-                        'If cola.Count() = 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 16) < 0 And IncludedOf(16) Then
-                        '    numOf(16) = numOf(16) + 1
-                        '    If numOf(16) < maxpertestplus1 Then details(16) = details(16) & "    " & chld.name & "[" & chld.ID & "] has no external predecessors" & htmlCrLf
-                        'End If
                         ' Check 51
                         Set cola = Subtract(tasks_set(chld.SuccessorTasks), tasks_set(chld.OutlineParent.OutlineChildren))
                         If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 51) < 0 And IncludedOf(51) Then
