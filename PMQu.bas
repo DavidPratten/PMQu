@@ -105,6 +105,7 @@ Dim result As String
 ActualResultsFieldID = FieldIDofCustomField("Actual Results", "Text")
 ExpectedResultsFieldId = FieldIDofCustomField("Expected Results", "Text")
 ActualAsExpectedFieldID = FieldIDofCustomField("Actual As Expected", "Text")
+Set Lookaside = New Dictionary
 
 
 If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedFieldID > 0 Then ' this is a test file
@@ -226,7 +227,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     Dim preamble As String
     ReDim numOf(maxTest)
     ReDim details(maxTest)
-    Set Lookaside = New Dictionary
 
     
     Dim descOf(maxTest) As String
@@ -832,8 +832,8 @@ continue2332:
                             If cola.Count() > 0 Then
                                 reportable = False
                                 For Each TaskID In cola.Keys
-                                    LogErrorProject 24, ActiveProject.tasks(Val(TaskID)), "!NameID2! is not the successor of !NameID!", chld
-                                End If
+                                    LogErrorTask 24, ActiveProject.tasks(Val(TaskID)), "!NameID2! is not the successor of !NameID!", chld
+                                Next
                             End If
                         End If
                     End If
