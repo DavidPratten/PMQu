@@ -352,23 +352,16 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(30) = 70
     descOf(31) = "Dependency is redundant" ' Network.
     bandOf(31) = 40
-    descOf(32) = "Project has more than one top level task (You may add a 'Status Date Milestone' at Outline Level 1 with Start No Earlier Than constraint)" ' WBS/PBS.
+    descOf(32) = "Project has more than one top level task." ' WBS/PBS.
     bandOf(32) = 30
     descOf(33) = "Project Summary Task is visible" ' WBS/PBS.
     bandOf(33) = 10
-    descOf(35) = "A successor of Status Date Milestone has less than 10 days slack" ' Scheduling.
-    sevOf(35) = sevWarning
-    bandOf(35) = 60
     descOf(36) = "Recommend the following settings under File > Options > Schedule" ' Project.
     bandOf(36) = 10
     sevOf(36) = sevWarning
     descOf(37) = "You are not using MS Project 2010 or 2013.  Your mileage may vary." ' Project.
     bandOf(37) = 10
     sevOf(37) = sevWarning
-    descOf(38) = "'Status Date Milestone' has a predecessor."
-    bandOf(38) = 40
-    descOf(39) = "'Status Date Milestone' has a successor that is not floating, it has already started."
-    bandOf(39) = 40
     descOf(40) = "Task has blank name" ' Item.
     bandOf(40) = 20
     descOf(41) = "Only this Summary Task's Start Milestone's name may begin with 'Start '" ' WBS/PBS.
@@ -510,47 +503,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     
     If numOf(testNo) = 0 Then ' only do more tests if all tasks are not nothing and not blank ie have a non-blank name
     
-        testNo = 34
-        Dim StatusDateMilestoneID As Integer
-        StatusDateMilestoneID = -1
-        For Each tsk In ActiveProject.tasks
-            If tsk.ID >= LowID And tsk.ID <= HighID Then
-                If tsk.Name = "Status Date Milestone" And tsk.OutlineLevel = 1 And tsk.Milestone And tsk.ConstraintType = pjSNET Then
-                    StatusDateMilestoneID = tsk.ID
-                    tsk.ConstraintDate = ReallyStatusDate()
-                End If
-            End If
-        Next
-        If StatusDateMilestoneID = -1 Then
-            ' pass
-        Else
-            ' check to see if any of the successors have low slack
-            
-            For Each tsk2 In ActiveProject.tasks(StatusDateMilestoneID).SuccessorTasks
-                If tsk2.ID >= LowID And tsk2.ID <= HighID Then
-                    ' check if successors have already started
-                    testNo = 39
-                    If tsk2.PercentComplete <> 0 Then
-                        If IncludedOf(testNo) Then
-                            LogErrorTask testNo, ActiveProject.tasks(StatusDateMilestoneID), "Remove predecessor !NameID! from !NameID2! it started on " & tsk2.ActualStart, tsk2
-                        End If
-                    Else ' only test if 39 passes
-                        testNo = 35
-                        If Min(tsk2.TotalSlack, tsk2.StartSlack) < 10 * minPerDay And IncludedOf(testNo) Then
-                            LogErrorTask testNo, tsk2, "!NameID! has " & Min(tsk2.TotalSlack, tsk2.StartSlack) / minPerDay & " days slack"
-                        End If
-                    End If
-                End If
-            Next
-            ' check if status date milestone has predecessors
-            testNo = 38
-            If ActiveProject.tasks(StatusDateMilestoneID).PredecessorTasks.Count > 0 Then
-                LogErrorProject testNo, ""
-            End If
-        End If
-    
-        
-       
         For Each tsk In ActiveProject.tasks
             If tsk.ID >= LowID And tsk.ID <= HighID Then
                 If tsk.Summary Then
@@ -608,7 +560,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                 End If
             
                 If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 11) < 0 And IncludedOf(11) Then
-                    If tsk.SuccessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjFNLT Or tsk.ID = StatusDateMilestoneID) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And IsWBSMilestone("Finish", tsk)) Then 'ignore external milestones AND the origin "Finish" Milestone
+                    If tsk.SuccessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjFNLT) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And IsWBSMilestone("Finish", tsk)) Then 'ignore external milestones AND the origin "Finish" Milestone
                         LogErrorTask 11, tsk, "!NameID!"
                     End If
                 End If
@@ -761,7 +713,7 @@ continue2332:
                 End If
                 
                 testNo = 32
-                If tsk.OutlineLevel = 1 And tsk.ID <> StatusDateMilestoneID And IncludedOf(testNo) Then
+                If tsk.OutlineLevel = 1 And IncludedOf(testNo) Then
                     LogErrorTask testNo, tsk, "!NameID!"
                 End If
             End If
