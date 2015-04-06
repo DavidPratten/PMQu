@@ -22,7 +22,7 @@ Global HighID As Long
 Dim Lookaside As Dictionary
 Const htmlCrLf = "<br />"
 Const minPerDay = 60 * 8
-Const maxTest = 53
+Const maxTest = 55
 Const maxpertestplus1 = 100 ' 4 of on screen message
 Dim numOf() As Integer
 Dim details() As String
@@ -403,6 +403,10 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(52) = 40
     descOf(53) = "Milestone must be zero Duration"
     bandOf(53) = 20
+    descOf(54) = "Really? Invalid Successor"
+    bandOf(54) = 40
+    descOf(55) = "Really? Invalid Predecessor"
+    bandOf(55) = 40
     
     
     Res.Add "Linked to Disk File", (UBound(Split(ActiveProject.FullName, ".")) > 0)
@@ -813,7 +817,7 @@ continue2332:
                         If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 52) < 0 And IncludedOf(52) Then
                             For Each TaskID In cola.Keys
                                 ' if not start item of a sibling then
-                                If Not (Left(ActiveProject.tasks(Val(TaskID)).Name, 7) = "Finish " And ActiveProject.tasks(Val(TaskID)).Milestone And ActiveProject.tasks(Val(TaskID)).OutlineParent.OutlineParent.ID = chld.OutlineParent.ID) Then
+                                If Not (IsWBSMilestone("Finish", ActiveProject.tasks(Val(TaskID))) And ActiveProject.tasks(Val(TaskID)).OutlineParent.OutlineParent.ID = chld.OutlineParent.ID) Then
                                     LogErrorTask 52, chld, "!NameID! should not be the preceded by !NameID2!.", ActiveProject.tasks(Val(TaskID))
                                 End If
                             Next
@@ -854,9 +858,8 @@ continue2332:
                         
                     Next
                 End If
-               testNo = 51
+               testNo = 54
                If IncludedOf(testNo) And StartMilestones.Exists(tsk.ID) Then
-                   
                    Set cola = Subtract(tasks_set(tsk.SuccessorTasks), start_successor_set(tsk, StartMilestoneID, FinishMilestones))
                    If cola.Count() > 0 Then
                        For Each TaskID In cola.Keys
@@ -865,7 +868,7 @@ continue2332:
                    End If
                End If
     
-               testNo = 52
+               testNo = 55
                If IncludedOf(testNo) And FinishMilestones.Exists(tsk.ID) Then
                    Set cola = Subtract(tasks_set(tsk.PredecessorTasks), finish_predecessor_set(tsk, FinishMilestoneID, StartMilestones))
                    If cola.Count() > 0 Then
@@ -1151,7 +1154,17 @@ continue2332:
     
 End Function
 
+Function IsWBSMilestone(WBSType As String, tsk As Task) As Boolean
+Select Case WBSType
+    Case "Start"
+        IsWBSMilestone = (tsk.Name = "Start " & tsk.OutlineParent.Name And tsk.Milestone)
+    Case "Finish"
+        IsWBSMilestone = (tsk.Name = "Finish " & tsk.OutlineParent.Name And tsk.Milestone)
+    Case Else
+        err.Raise CVErr(50001), "PMQu", "Invalid WBSType"
+End Select
 
+End Function
 Sub AddDeleteImplicitDependencies(AddorDelete As String, StartMilestoneID As Dictionary, FinishMilestoneID As Dictionary)
     Dim StartTsk As Task
     Dim FinishTsk As Task
