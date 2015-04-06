@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.126"
+Global Const ver = "1.0.131"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -370,18 +370,15 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(42) = 30
     descOf(44) = "Task with duplicate 'Permanent ID' field" ' Item.
     bandOf(44) = 20
-    'descOf(45) = "Use an Interim Output Milestone here and make distant tasks dependent on the Milestone." ' Network.
-    'bandOf(45) = 40
-    'sevOf(45) = sevWarning
+    descOf(45) = "Distant successor dependency should be to, or from, a milestone that represents the interim deliverable." ' Network.
+    bandOf(45) = 40
+    sevOf(45) = sevWarning
     descOf(46) = "Tasks with common predecessors suggests that an Interim Milestone is missing" ' Network.
     bandOf(46) = 40
     sevOf(46) = sevWarning
     descOf(47) = "Recommend the following settings under Project > Project Information" ' Project Information.
     sevOf(47) = sevWarning
     bandOf(47) = 10
-    descOf(48) = "Use an Interim Milestone as the predecessor or successor." ' Network.
-    sevOf(48) = sevWarning
-    bandOf(48) = 40
     descOf(49) = "Permanent ID field must be 1 or greater" ' Item.
     bandOf(49) = 20
     descOf(50) = "Task is Effort Driven." ' Item.
@@ -817,24 +814,15 @@ continue2332:
     
     End If
     
-    If numOf(40) = 0 And numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 And numOf(51) = 0 And numOf(52) = 0 Then
+    If numOf(40) = 0 And numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 And numOf(51) = 0 And numOf(52) = 0 And numOf(53) = 0 Then
     
         For Each tsk In ActiveProject.tasks
             If tsk.ID >= LowID And tsk.ID <= HighID Then
                 ' Check that distant dependencies are from an interim milestone.
-                If Not tsk.Summary And Not tsk.Milestone And tsk.OutlineLevel > 1 And tsk.SuccessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 45) < 0 And IncludedOf(45) Then
+                If tsk.SuccessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 45) < 0 And IncludedOf(45) Then
                     For Each tsk2 In tsk.SuccessorTasks
-                        If tsk.OutlineParent.ID <> tsk2.OutlineParent.ID And tsk.ID > tsk2.ID And Not tsk2.Milestone Then
-                            LogErrorTask 48, tsk, "!NameID! distant successor dependency to !NameID2! should be to/from an Interim Milestone.", tsk2
-                        End If
-                    Next
-                End If
-        
-                ' Check that distant dependencies are to an interim milestone.
-                If Not tsk.Summary And Not tsk.Milestone And tsk.OutlineLevel > 1 And tsk.PredecessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 48) < 0 And IncludedOf(48) Then
-                    For Each tsk2 In tsk.PredecessorTasks
-                        If tsk.OutlineParent.ID <> tsk2.OutlineParent.ID And Not tsk2.Milestone Then
-                            LogErrorTask 48, tsk, "!NameID2! successor dependency to !NameID! should be to/from an Interim Milestone.", tsk2
+                        If tsk.OutlineParent.ID <> tsk2.OutlineParent.ID And tsk.ID > tsk2.ID And Not (tsk.Milestone Or tsk2.Milestone) Then
+                            LogErrorTask 45, tsk, "!NameID! distant successor dependency to !NameID2! should be to, or from, a Milestone that represents the interim deliverable.", tsk2
                         End If
                     Next
                 End If
