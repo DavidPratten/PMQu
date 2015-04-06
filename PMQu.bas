@@ -604,13 +604,13 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                 End If
                 
                 If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 10) < 0 And IncludedOf(10) Then
-                    If tsk.PredecessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjSNET) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 5) = "Start") Then 'ignore external milestones AND the origin "Start" Milestone
+                    If tsk.PredecessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjSNET) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And IsWBSMilestone("Start", tsk)) Then 'ignore external milestones AND the origin "Start" Milestone
                         LogErrorTask 10, tsk, "!NameID!"
                     End If
                 End If
             
                 If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 11) < 0 And IncludedOf(11) Then
-                    If tsk.SuccessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjFNLT Or tsk.ID = StatusDateMilestoneID) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And Left(tsk.Name, 6) = "Finish") Then 'ignore external milestones AND the origin "Finish" Milestone
+                    If tsk.SuccessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjFNLT Or tsk.ID = StatusDateMilestoneID) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And IsWBSMilestone("Finish", tsk)) Then 'ignore external milestones AND the origin "Finish" Milestone
                         LogErrorTask 11, tsk, "!NameID!"
                     End If
                 End If
@@ -628,11 +628,11 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                     startCount = 0
                     finishCount = 0
                     For Each chld In tsk.OutlineChildren
-                        If chld.Milestone And chld.Name = "Start " & tsk.Name Then
+                        If IsWBSMilestone("Start", chld) Then
                             startFound = True
                             StartMilestoneID.Add tsk.ID, chld.ID
                         End If
-                        If chld.Milestone And chld.Name = "Finish " & tsk.Name Then
+                        If IsWBSMilestone("Finish", chld) Then
                             FinishMilestoneID.Add tsk.ID, chld.ID
                             finishFound = True
                         End If
@@ -777,7 +777,7 @@ continue2332:
         If tsk.ID >= LowID And tsk.ID <= HighID Then
             If tsk.Summary Then
                 For Each chld In tsk.OutlineChildren
-                    If chld.Milestone And chld.Name = "Start " & tsk.Name Then
+                    If IsWBSMilestone("Start", chld) Then
                         ' Check 15
                         'Set cola = Intersect(descendents_set(tasks_set(chld.SuccessorTasks)), descendents_set(tasks_set(tsk.OutlineChildren)))
                         'If cola.Count() = 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 15) < 0 And IncludedOf(15) Then
@@ -795,7 +795,7 @@ continue2332:
                         If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 51) < 0 And IncludedOf(51) Then
                             For Each TaskID In cola.Keys
                                 ' if not start item of a sibling then
-                                If Not (Left(ActiveProject.tasks(Val(TaskID)).Name, 6) = "Start " And ActiveProject.tasks(Val(TaskID)).Milestone And ActiveProject.tasks(Val(TaskID)).OutlineParent.OutlineParent.ID = chld.OutlineParent.ID) Then
+                                If Not (IsWBSMilestone("Start", ActiveProject.tasks(Val(TaskID))) And ActiveProject.tasks(Val(TaskID)).OutlineParent.OutlineParent.ID = chld.OutlineParent.ID) Then
                                    LogErrorTask 51, chld, "!NameID! should not be the succeeded by !NameID2!.", ActiveProject.tasks(Val(TaskID))
                                 End If
                             Next
@@ -810,7 +810,7 @@ continue2332:
                             End If
                         End If
                     End If
-                    If chld.Milestone And chld.Name = "Finish " & tsk.Name Then
+                    If IsWBSMilestone("Finish", chld) Then
                         
                         ' Check 52
                         Set cola = Subtract(tasks_set(chld.PredecessorTasks), tasks_set(chld.OutlineParent.OutlineChildren))
@@ -1283,7 +1283,7 @@ Private Function wbs_descendents_set(tsk As Task, Optional recursive As Boolean 
     Dim t As Task
     Dim tsf As Task
     For Each t In tsk.OutlineChildren
-        If Left(t.Name, 6) <> "Start " And Left(t.Name, 7) <> "Finish " Then 'filter out the Start Finish Milestones
+        If Not IsWBSMilestone("Start", t) And Not IsWBSMilestone("Finish", t) Then 'filter out the Start Finish Milestones
             If Not Res.Exists(Str(t.ID)) Then Res.Add Str(t.ID), Str(t.ID)
             If t.Summary And recursive Then
                 Set subres = wbs_descendents_set(t)
@@ -1324,7 +1324,7 @@ For Each tid In taskids
             Set subres = descendents_set(tasks_set(t.OutlineChildren), False)
             For Each x In subres
                Set tsf = ActiveProject.tasks(Val(x))
-               If (tsf.Name = "Start " & t.Name Or tsf.Name = "Finish " & t.Name) And Not Res.Exists(x) Then Res.Add x, x
+               If (IsWBSMilestone("Start", tsf) Or IsWBSMilestone("Finish", tsf)) And Not Res.Exists(x) Then Res.Add x, x
             Next
             
         End If
@@ -1367,7 +1367,7 @@ For Each tid In taskids
                 Set subres = descendents_set_except(tasks_set(t.OutlineChildren), except, False)
                 For Each x In subres
                    Set tsf = ActiveProject.tasks(Val(x))
-                   If (tsf.Name = "Start " & t.Name Or tsf.Name = "Finish " & t.Name) And Not Res.Exists(x) Then Res.Add x, x
+                   If (IsWBSMilestone("Start", tsf) Or IsWBSMilestone("Finish", tsf)) And Not Res.Exists(x) Then Res.Add x, x
                 Next
                 
             End If
