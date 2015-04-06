@@ -827,24 +827,16 @@ continue2332:
                                 End If
                             Next
                         End If
-                        If numOf(10) = 0 And numOf(11) = 0 And numOf(23) = 0 And IncludedOf(23) And IncludedOf(24) Then    'only do this test if the 23's are clear
+                        If numOf(10) = 0 And numOf(11) = 0 And (numOf(23) = 0 Or Not IncludedOf(23)) And IncludedOf(24) Then    'only do this test if the 23's are clear
                             Set cola = Subtract(descendents_set_except(tasks_set(tsk.OutlineChildren), Str(chld.ID), False), predecessors_set(tasks_set(chld.PredecessorTasks)))
                             If cola.Count() > 0 Then
-                                
                                 reportable = False
                                 For Each TaskID In cola.Keys
-                                    If numOf(24) < maxpertestplus1 And Val(TaskID) <> StatusDateMilestoneID Then
-                                            reportable = True
-                                            details(24) = details(24) & "    " & chld.Name & "[" & chld.ID & "] is not the successor of " & ActiveProject.tasks(Val(TaskID)).Name & "[" & ActiveProject.tasks(Val(TaskID)).ID & "]" & htmlCrLf
-                                    End If
-                                Next
-                                If reportable Then
-                                    LogErrorProject 24, ""
+                                    LogErrorProject 24, ActiveProject.tasks(Val(TaskID)), "!NameID2! is not the successor of !NameID!", chld
                                 End If
                             End If
                         End If
-                        
-                   End If
+                    End If
                 Next
             End If
         
