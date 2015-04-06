@@ -700,7 +700,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                             End If
                             Set cola = Intersect(tasks_set(tsk.PredecessorTasks), tasks_set(tsk2.PredecessorTasks))
                             If cola.Count() > 1 Then
-                                LogErrorTask 46, tsk, "!NameID! and !NameID2! have the " & cola.Count() & " predecessors [" & Trim(Join(cola.Keys(), ", ")) & "] in common.", tsk2
+                                LogErrorTask 46, tsk, "It would be simpler if !NameID! and !NameID2! depended on a new Interim Milestone which had these " & cola.Count() & " common predecessors [" & Trim(Join(cola.Keys(), ", ")) & "].", tsk2
                             End If
                         End If
 continue2332:
