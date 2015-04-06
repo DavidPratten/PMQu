@@ -99,14 +99,13 @@ Dim Res As Dictionary
 Dim i As Long
 Dim tsk As Task
 Dim tskID As Variant
+Dim result As String
 
 ' Initialise Global Variables.
 ActualResultsFieldID = FieldIDofCustomField("Actual Results", "Text")
 ExpectedResultsFieldId = FieldIDofCustomField("Expected Results", "Text")
 ActualAsExpectedFieldID = FieldIDofCustomField("Actual As Expected", "Text")
-ReDim numOf(maxTest)
-ReDim details(maxTest)
-Set Lookaside = New Dictionary
+
 
 If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedFieldID > 0 Then ' this is a test file
     Set SubPlans = SubPlans_set()
@@ -127,6 +126,7 @@ If ActualResultsFieldID > 0 And ExpectedResultsFieldId > 0 And ActualAsExpectedF
             End If
             Testing = True
             Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check")
+            result = result & Res("message")
         Next
         ' Compare Actual with Expected updating results
         For Each tsk In ActiveProject.tasks
@@ -142,10 +142,11 @@ Else
     LowID = 1
     HighID = ActiveProject.tasks.Count
     Set Res = CheckAnalyse("All", "PMQu - Project Information Quality Check")
+    result = Res("message")
 End If
 Dim chkPathName As String
 If Res("Linked to Disk File") Then
-    chkPathName = CreateReport("Check", Res("message"))
+    chkPathName = CreateReport("Check", result)
     OpenReport (chkPathName)
 Else
     MsgBox "The project must be first saved to disk."
@@ -172,7 +173,7 @@ Private Function CreateReport(Suffix As String, message As String) As String
     chkPathName = chkPathName & "\" & ActiveProject.Name & " " & Suffix & ".html"
     Set oFile = FSO.CreateTextFile(chkPathName)
 
-    oFile.Write "<html><head><style>body {  font-family: Verdana, Arial, sans-serif; }   div.details {   margin-left: 4em; margin-bottom:1em;} h1,h2,h3,h4 {     color: #234F32;  margin-top:.8em;     font-family:""Trebuchet MS"",sans-serif;     font-weight:normal; } h1 {     font-size:218%;     margin-top:.6em;     margin-bottom:.6em;     line-height:1.1em; } h2 {     font-size:150%;     margin-top:1em;     margin-bottom:.2em;     line-height:1.2em; p, ul, dl {     margin-top:.6em;     margin-bottom:.8em; }</style></head><body>"
+    oFile.Write "<html><head><title>PMQu " & ActiveProject.tasks(LowID).Name & "</title><style>body {  font-family: Verdana, Arial, sans-serif; }   div.details {   margin-left: 4em; margin-bottom:1em;} h1,h2,h3,h4 {     color: #234F32;  margin-top:.8em;     font-family:""Trebuchet MS"",sans-serif;     font-weight:normal; } h1 {     font-size:218%;     margin-top:.6em;     margin-bottom:.6em;     line-height:1.1em; } h2 {     font-size:150%;     margin-top:1em;     margin-bottom:.2em;     line-height:1.2em; p, ul, dl {     margin-top:.6em;     margin-bottom:.8em; }</style></head><body>"
     oFile.Write message
     oFile.Write "</body></html>"
     oFile.Close
@@ -223,6 +224,11 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     Dim tsk2 As Task
     Dim message As String
     Dim preamble As String
+    ReDim numOf(maxTest)
+    ReDim details(maxTest)
+    Set Lookaside = New Dictionary
+
+    
     Dim descOf(maxTest) As String
     Dim sevOf(maxTest) As Integer
     Dim bandOf(maxTest) As Integer
@@ -1133,7 +1139,7 @@ continue2332:
     
    
    
-    preamble = "<h1>" & ReportName & " </h1> " & "<p><small><b>v</b>" & ver & "<b> For:</b> " & ActiveProject.FullName & htmlCrLf & "<b>Status Date is</b> " & ReallyStatusDate() & " <b>Created at:</b> " & Now
+    preamble = "<h1>" & ActiveProject.tasks(LowID).Name & " </h1> " & "<p><small>" & ReportName & "<br /><b>v</b>" & ver & "<b> For:</b> " & ActiveProject.FullName & htmlCrLf & "<b>Status Date is</b> " & ReallyStatusDate() & " <b>Created at:</b> " & Now
     If PermanentIDFieldID <> 0 Then
         preamble = preamble & htmlCrLf & "<b>Next unused Permanent ID:</b> " & MaxPermID + 1
     End If
