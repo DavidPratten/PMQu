@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.131"
+Global Const ver = "1.0.200"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -383,9 +383,9 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     descOf(50) = "Task is Effort Driven." ' Item.
     bandOf(50) = 50
     descOf(51) = "Start Milestone has a successor which is not a sibling"
-    bandOf(51) = 70
+    bandOf(51) = 30
     descOf(52) = "Finish Milestone has a predecessor which is not a sibling"
-    bandOf(52) = 70
+    bandOf(52) = 30
     descOf(53) = "Milestone must be zero Duration"
     bandOf(53) = 20
     
