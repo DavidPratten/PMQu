@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.200"
+Global Const ver = "1.0.201"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -171,7 +171,7 @@ Private Function CreateReport(Suffix As String, message As String) As String
         MkDir chkPathName
     End If
     
-    chkPathName = chkPathName & "\" & ActiveProject.Name & " " & Suffix & ".html"
+    chkPathName = chkPathName & "\" & FSO.GetFileName(ActiveProject.Name) & " " & Suffix & ".html"
     Set oFile = FSO.CreateTextFile(chkPathName)
 
     oFile.Write "<html><head><title>PMQu " & ActiveProject.tasks(LowID).Name & "</title><style>body {  font-family: Verdana, Arial, sans-serif; }   div.details {   margin-left: 4em; margin-bottom:1em;} h1,h2,h3,h4 {     color: #234F32;  margin-top:.8em;     font-family:""Trebuchet MS"",sans-serif;     font-weight:normal; } h1 {     font-size:218%;     margin-top:.6em;     margin-bottom:.6em;     line-height:1.1em; } h2 {     font-size:150%;     margin-top:1em;     margin-bottom:.2em;     line-height:1.2em; p, ul, dl {     margin-top:.6em;     margin-bottom:.8em; }</style></head><body>"
