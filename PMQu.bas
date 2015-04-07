@@ -973,64 +973,7 @@ Select Case WBSType
 End Select
 
 End Function
-Sub AddDeleteImplicitDependencies(AddorDelete As String, StartMilestoneID As Dictionary, FinishMilestoneID As Dictionary)
-    Dim StartTsk As Task
-    Dim FinishTsk As Task
-    Dim SiblingStartTsk As Task
-    Dim SiblingFinishTsk As Task
-    Dim tsk As Task
-    Dim Sibling As Task
-    Set Lookaside = New Dictionary ' Reset the calculation cache
-    For Each tsk In ActiveProject.tasks
-        If tsk.Summary Then
-            Set StartTsk = ActiveProject.tasks(StartMilestoneID(tsk.ID))
-            Set FinishTsk = ActiveProject.tasks(FinishMilestoneID(tsk.ID))
-            For Each Sibling In tsk.OutlineChildren
-                If Sibling.ID <> StartMilestoneID(tsk.ID) And Sibling.ID <> FinishMilestoneID(tsk.ID) Then
-                    If Sibling.Summary Then
-                        Set SiblingStartTsk = ActiveProject.tasks(StartMilestoneID(Sibling.ID))
-                        Set SiblingFinishTsk = ActiveProject.tasks(FinishMilestoneID(Sibling.ID))
-                    Else
-                        Set SiblingStartTsk = Sibling
-                        Set SiblingFinishTsk = Sibling
-                    End If
-                    If AddorDelete = "Add" Then
-                        StartTsk.LinkSuccessors SiblingStartTsk
-                        SiblingFinishTsk.LinkSuccessors FinishTsk
-                    Else
-                        If AddorDelete = "Delete" Then
-                            If UboundFilterExactMatch(StartTsk.Successors, SiblingStartTsk.ID) >= 0 Then StartTsk.UnlinkSuccessors SiblingStartTsk
-                            If UboundFilterExactMatch(SiblingFinishTsk.Successors, FinishTsk.ID) >= 0 Then SiblingFinishTsk.UnlinkSuccessors FinishTsk
-                        End If
-                    End If
-                End If
-            Next
-        End If
-    Next
-End Sub
 
-Private Sub DeleteRedundantDependencies()
-    Dim thisSuccessor As Dictionary
-    Dim successorsLessOne As Dictionary
-    Dim cola As Dictionary
-    Dim tsk As Task
-    Dim tsk2 As Task
-    Set Lookaside = New Dictionary ' Reset the calculation cache
-    For Each tsk In ActiveProject.tasks
-        If Not tsk.Summary And tsk.SuccessorTasks.Count > 0 Then
-            For Each tsk2 In tsk.SuccessorTasks
-                Set thisSuccessor = New Dictionary
-                thisSuccessor.Add Str(tsk2.ID), Str(tsk2.ID)
-                Set successorsLessOne = Subtract(tasks_set(tsk.SuccessorTasks), thisSuccessor)
-                Set cola = Intersect(successors_set(successorsLessOne), thisSuccessor)
-                If cola.Count() <> 0 Then
-                    tsk.UnlinkSuccessors tsk2
-                End If
-                
-            Next
-        End If
-    Next
-End Sub
 
 Function ReallyStatusDate()
 If ActiveProject.StatusDate = "NA" Then
