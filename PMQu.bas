@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.201"
+Global Const ver = "1.0.202"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -369,9 +369,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(42) = 30
     descOf(44) = "Task with duplicate 'Permanent ID' field" ' Item.
     bandOf(44) = 20
-    descOf(45) = "Distant successor dependency should be to, or from, a milestone that represents the interim deliverable." ' Network.
-    bandOf(45) = 40
-    sevOf(45) = sevWarning
     descOf(46) = "Tasks with common predecessors suggests that an Interim Milestone is missing" ' Network.
     bandOf(46) = 40
     sevOf(46) = sevWarning
@@ -674,15 +671,14 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                         LogErrorTask testNo, tsk, "!NameID!"
                     End If
                 End If
-           
-                
+               
                 
                 ' check for common predecessors
-                If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 46) < 0 And IncludedOf(46) Then
+                If Not tsk.Summary And Not IsWBSMilestone("Start", tsk) And Not IsWBSMilestone("Finish", tsk) And tskFieldExactMatch(tsk, HealthCheckOptionsID, 46) < 0 And IncludedOf(46) Then
                     Set thistsk = New Dictionary
                     thistsk.Add Str(tsk.ID), Str(tsk.ID)
                     For Each tsk2 In ActiveProject.tasks
-                        If tsk.ID < tsk2.ID Then
+                        If tsk.ID < tsk2.ID And Not IsWBSMilestone("Start", tsk2) And Not IsWBSMilestone("Finish", tsk2) Then
                             Set thistsk2 = New Dictionary
                             thistsk2.Add Str(tsk2.ID), Str(tsk2.ID)
                             Set cola = Intersect(successors_set(thistsk), thistsk2)
@@ -693,7 +689,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                             If cola.Count() > 0 Then ' successors can't have interesting sets of common precessors
                                 GoTo continue2332:
                             End If
-                            Set cola = Intersect(tasks_set(tsk.PredecessorTasks), tasks_set(tsk2.PredecessorTasks))
+                            Set cola = Intersect(tasks_set_not_start_or_finish(tsk.PredecessorTasks), tasks_set_not_start_or_finish(tsk2.PredecessorTasks))
                             If cola.Count() > 1 Then
                                 LogErrorTask 46, tsk, "It would be simpler if !NameID! and !NameID2! depended on a new Interim Milestone which had these " & cola.Count() & " common predecessors [" & Trim(Join(cola.Keys(), ", ")) & "].", tsk2
                             End If
@@ -788,24 +784,6 @@ continue2332:
 
     
     End If
-    
-    If numOf(40) = 0 And numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 And numOf(51) = 0 And numOf(52) = 0 And numOf(53) = 0 Then
-    
-        For Each tsk In ActiveProject.tasks
-            If tsk.ID >= LowID And tsk.ID <= HighID Then
-                ' Recommend that distant dependencies (not shared grandparent) are to/from an interim milestone.
-                If tsk.OutlineLevel > 2 And tsk.SuccessorTasks.Count > 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 45) < 0 And IncludedOf(45) Then
-                    For Each tsk2 In tsk.SuccessorTasks
-                        If tsk2.OutlineLevel > 2 And tsk.OutlineParent.OutlineParent.ID <> tsk2.OutlineParent.OutlineParent.ID And Not (tsk.Milestone Or tsk2.Milestone) Then
-                            LogErrorTask 45, tsk, "!NameID! distant successor dependency to !NameID2! should be to, or from, a Milestone that represents the interim deliverable.", tsk2
-                        End If
-                    Next
-                End If
-            End If
-        Next
-        
-    End If
-    
     
     message = ""
     
@@ -1001,6 +979,15 @@ For Each tsk In tasks
     Res.Add Str(tsk.ID), Str(tsk.ID)
 Next
 Set tasks_set = Res
+End Function
+Function tasks_set_not_start_or_finish(tasks As tasks) As Dictionary
+Dim Res As Dictionary
+Set Res = New Dictionary
+Dim tsk As Task
+For Each tsk In tasks
+    If Not IsWBSMilestone("Start", tsk) And Not IsWBSMilestone("Finish", tsk) Then Res.Add Str(tsk.ID), Str(tsk.ID)
+Next
+Set tasks_set_not_start_or_finish = Res
 End Function
 
 Function SubPlans_set() As Dictionary
