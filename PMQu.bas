@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.202"
+Global Const ver = "1.0.203"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -658,13 +658,6 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                     End If
                 End If
             
-                testNo = 30
-                If tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
-                    If tsk.PercentComplete <> 0 And tsk.PercentComplete <> 100 Then
-                        LogErrorTask testNo, tsk, "!NameID!"
-                    End If
-                End If
-           
                 testNo = 53
                 If tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
                     If tsk.Duration <> 0 Then
@@ -706,96 +699,86 @@ continue2332:
         Next tsk
         
         
-    Set StartMilestones = InvertDictionary(StartMilestoneID)
-    Set FinishMilestones = InvertDictionary(FinishMilestoneID)
-     
-    For Each tsk In ActiveProject.tasks
-        If tsk.ID >= LowID And tsk.ID <= HighID Then
-            If tsk.Summary Then
-                For Each chld In tsk.OutlineChildren
-                    If IsWBSMilestone("Start", chld) Then
-                        ' Check 51
-                        Set cola = Subtract(tasks_set(chld.SuccessorTasks), tasks_set(chld.OutlineParent.OutlineChildren))
-                        If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 51) < 0 And IncludedOf(51) Then
-                            For Each TaskID In cola.Keys
-                                ' if not start item of a sibling then
-                                If Not (IsWBSMilestone("Start", ActiveProject.tasks(Val(TaskID))) And ActiveProject.tasks(Val(TaskID)).OutlineParent.OutlineParent.ID = chld.OutlineParent.ID) Then
-                                   LogErrorTask 51, chld, "!NameID! should not be the succeeded by !NameID2!.", ActiveProject.tasks(Val(TaskID))
-                                End If
-                            Next
-                        End If
-                        If numOf(10) = 0 And numOf(11) = 0 Then
-                            Set cola = Subtract(descendents_set_except(tasks_set(tsk.OutlineChildren), Str(chld.ID), False), successors_set(tasks_set(chld.SuccessorTasks)))
-                            If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 23) < 0 And IncludedOf(23) Then
+        Set StartMilestones = InvertDictionary(StartMilestoneID)
+        Set FinishMilestones = InvertDictionary(FinishMilestoneID)
+         
+        For Each tsk In ActiveProject.tasks
+            If tsk.ID >= LowID And tsk.ID <= HighID Then
+                If tsk.Summary Then
+                    For Each chld In tsk.OutlineChildren
+                        If IsWBSMilestone("Start", chld) Then
+                            ' Check 51
+                            Set cola = Subtract(tasks_set(chld.SuccessorTasks), tasks_set(chld.OutlineParent.OutlineChildren))
+                            If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 51) < 0 And IncludedOf(51) Then
                                 For Each TaskID In cola.Keys
-                                    LogErrorTask 23, ActiveProject.tasks(Val(TaskID)), "!NameID2! is not the predecessor of !NameID!", chld
+                                    ' if not start item of a sibling then
+                                    If Not (IsWBSMilestone("Start", ActiveProject.tasks(Val(TaskID))) And ActiveProject.tasks(Val(TaskID)).OutlineParent.OutlineParent.ID = chld.OutlineParent.ID) Then
+                                       LogErrorTask 51, chld, "!NameID! should not be the succeeded by !NameID2!.", ActiveProject.tasks(Val(TaskID))
+                                    End If
                                 Next
                             End If
-                        End If
-                    End If
-                    If IsWBSMilestone("Finish", chld) Then
-                        
-                        ' Check 52
-                        Set cola = Subtract(tasks_set(chld.PredecessorTasks), tasks_set(chld.OutlineParent.OutlineChildren))
-                        If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 52) < 0 And IncludedOf(52) Then
-                            For Each TaskID In cola.Keys
-                                ' if not start item of a sibling then
-                                If Not (IsWBSMilestone("Finish", ActiveProject.tasks(Val(TaskID))) And ActiveProject.tasks(Val(TaskID)).OutlineParent.OutlineParent.ID = chld.OutlineParent.ID) Then
-                                    LogErrorTask 52, chld, "!NameID! should not be the preceded by !NameID2!.", ActiveProject.tasks(Val(TaskID))
+                            If numOf(10) = 0 And numOf(11) = 0 Then
+                                Set cola = Subtract(descendents_set_except(tasks_set(tsk.OutlineChildren), Str(chld.ID), False), successors_set(tasks_set(chld.SuccessorTasks)))
+                                If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 23) < 0 And IncludedOf(23) Then
+                                    For Each TaskID In cola.Keys
+                                        LogErrorTask 23, ActiveProject.tasks(Val(TaskID)), "!NameID2! is not the predecessor of !NameID!", chld
+                                    Next
                                 End If
-                            Next
-                        End If
-                        If numOf(10) = 0 And numOf(11) = 0 And (numOf(23) = 0 Or Not IncludedOf(23)) And IncludedOf(24) Then    'only do this test if the 23's are clear
-                            Set cola = Subtract(descendents_set_except(tasks_set(tsk.OutlineChildren), Str(chld.ID), False), predecessors_set(tasks_set(chld.PredecessorTasks)))
-                            If cola.Count() > 0 Then
-                                reportable = False
-                                For Each TaskID In cola.Keys
-                                    LogErrorTask 24, ActiveProject.tasks(Val(TaskID)), "!NameID2! is not the successor of !NameID!", chld
-                                Next
                             End If
                         End If
-                    End If
-                Next
-            End If
-        
-            If numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 And numOf(51) = 0 And numOf(52) = 0 Then   ' Only perform this test if otherwise all OK.
-        
-                ' assumes that no dependencies on summaries
-                If Not tsk.Summary And tsk.SuccessorTasks.Count > 0 Then
-                    For Each tsk2 In tsk.SuccessorTasks
-                        Set thisSuccessor = New Dictionary
-                        thisSuccessor.Add Str(tsk2.ID), Str(tsk2.ID)
-                        Set successorsLessOne = Subtract(tasks_set(tsk.SuccessorTasks), thisSuccessor)
-                        Set cola = Intersect(successors_set(successorsLessOne), thisSuccessor)
-                        If cola.Count() <> 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 31) < 0 And IncludedOf(31) Then
-                            LogErrorTask 31, tsk, "!NameID! has redundant successor dependency to !NameID2!.", tsk2
+                        If IsWBSMilestone("Finish", chld) Then
+                            
+                            ' Check 52
+                            Set cola = Subtract(tasks_set(chld.PredecessorTasks), tasks_set(chld.OutlineParent.OutlineChildren))
+                            If cola.Count() > 0 And tskFieldExactMatch(chld, HealthCheckOptionsID, 52) < 0 And IncludedOf(52) Then
+                                For Each TaskID In cola.Keys
+                                    ' if not start item of a sibling then
+                                    If Not (IsWBSMilestone("Finish", ActiveProject.tasks(Val(TaskID))) And ActiveProject.tasks(Val(TaskID)).OutlineParent.OutlineParent.ID = chld.OutlineParent.ID) Then
+                                        LogErrorTask 52, chld, "!NameID! should not be the preceded by !NameID2!.", ActiveProject.tasks(Val(TaskID))
+                                    End If
+                                Next
+                            End If
+                            If numOf(10) = 0 And numOf(11) = 0 And (numOf(23) = 0 Or Not IncludedOf(23)) And IncludedOf(24) Then    'only do this test if the 23's are clear
+                                Set cola = Subtract(descendents_set_except(tasks_set(tsk.OutlineChildren), Str(chld.ID), False), predecessors_set(tasks_set(chld.PredecessorTasks)))
+                                If cola.Count() > 0 Then
+                                    reportable = False
+                                    For Each TaskID In cola.Keys
+                                        LogErrorTask 24, ActiveProject.tasks(Val(TaskID)), "!NameID2! is not the successor of !NameID!", chld
+                                    Next
+                                End If
+                            End If
                         End If
-                        
                     Next
                 End If
+            
+                If numOf(2) = 0 And numOf(3) = 0 And numOf(10) = 0 And numOf(11) = 0 And numOf(31) = 0 And numOf(13) = 0 And numOf(41) = 0 And numOf(42) = 0 And numOf(51) = 0 And numOf(52) = 0 Then   ' Only perform this test if otherwise all OK.
+            
+                    ' assumes that no dependencies on summaries
+                    If Not tsk.Summary And tsk.SuccessorTasks.Count > 0 Then
+                        For Each tsk2 In tsk.SuccessorTasks
+                            Set thisSuccessor = New Dictionary
+                            thisSuccessor.Add Str(tsk2.ID), Str(tsk2.ID)
+                            Set successorsLessOne = Subtract(tasks_set(tsk.SuccessorTasks), thisSuccessor)
+                            Set cola = Intersect(successors_set(successorsLessOne), thisSuccessor)
+                            If cola.Count() <> 0 And tskFieldExactMatch(tsk, HealthCheckOptionsID, 31) < 0 And IncludedOf(31) Then
+                                LogErrorTask 31, tsk, "!NameID! has redundant successor dependency to !NameID2!.", tsk2
+                            End If
+                            
+                        Next
+                    End If
+                End If
             End If
+        Next tsk
+            
+        testNo = 33
+        If ActiveProject.DisplayProjectSummaryTask And IncludedOf(testNo) Then
+            LogErrorProject testNo, ""
         End If
-    Next tsk
-        
-    testNo = 33
-    If ActiveProject.DisplayProjectSummaryTask And IncludedOf(testNo) Then
-        LogErrorProject testNo, ""
-    End If
 
     
     End If
     
     message = ""
-    
-    ' #16 is a global test and the goal is 1
-    If numOf(16) = 1 Then
-        ClearActualResults 16
-    End If
-    
-    ' #18 is a global test and the goal is 1
-    If numOf(18) = 1 Then
-        ClearActualResults 18
-    End If
     
     ' #32 is a global test and the goal is 1
     If numOf(32) = 1 Then
@@ -842,6 +825,14 @@ continue2332:
                         End If
                     End If
                 End If
+                
+                testNo = 30
+                If tsk.Milestone And tskFieldExactMatch(tsk, HealthCheckOptionsID, testNo) < 0 And IncludedOf(testNo) Then
+                    If tsk.PercentComplete <> 0 And tsk.PercentComplete <> 100 Then
+                        LogErrorTask testNo, tsk, "!NameID!"
+                    End If
+                End If
+           
             End If
         Next
     End If
@@ -867,7 +858,10 @@ continue2332:
         If bandFound(band) And band = 30 Then message = message & "<h2>WBS/PBS</h2>"
         If bandFound(band) And band = 40 Then message = message & "<h2>Network</h2>"
         If bandFound(band) And band = 60 Then message = message & "<h2>Scheduling</h2>"
-        If bandFound(band) And band = 70 Then message = message & "<h2>Progress</h2>"
+        If bandFound(band) And band = 70 Then
+            message = message & "<h2>Progress</h2>"
+            If maxSev > sevWarning Then message = message & "<div class=""details""><em>Progress not checked due to <span style=""color: darkred; font-size:150%;"">&#x2718;</span> errors above.</em></div>"
+        End If
         For i = 1 To maxTest
             If numOf(i) > 0 And bandOf(i) = band Then
                 If sevOf(i) = sevWarning Then
@@ -894,7 +888,7 @@ continue2332:
         If bandFound(band) And band = 30 Then message = message & "<h3>WBS/PBS</h3>"
         If bandFound(band) And band = 40 Then message = message & "<h3>Network</h3>"
         If bandFound(band) And band = 60 Then message = message & "<h3>Scheduling</h3>"
-        If bandFound(band) And band = 70 Then message = message & "<h3>Progress</h3>"
+        If bandFound(band) And band = 70 Then message = message & "<h2>Progress</h2>"
         For i = 1 To maxTest
             If bandOf(i) = band Then
                 message = message & i & ". " & descOf(i) & htmlCrLf
