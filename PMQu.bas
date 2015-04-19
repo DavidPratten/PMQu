@@ -93,7 +93,7 @@ Public Sub OpenReport(fn As String)
     Dim lSuccess As Long
     lSuccess = ShellExecute(0, "Open", fn)
 End Sub
-Sub ScheduleHealthCheck()
+Sub PMQuQualityCheck()
 Dim SubPlans As Dictionary
 Dim Res As Dictionary
 Dim i As Long
@@ -545,13 +545,13 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                 End If
                 
                 If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 10) < 0 And IncludedOf(10) Then
-                    If tsk.PredecessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjSNET) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And IsWBSMilestone("Start", tsk)) Then 'ignore external milestones AND the origin "Start" Milestone
+                    If tsk.PredecessorTasks.Count = 0 And Not (tsk.OutlineLevel = 2 And IsWBSMilestone("Start", tsk)) Then 'ignore the origin "Start" Milestone
                         LogErrorTask 10, tsk, "!NameID!"
                     End If
                 End If
             
                 If Not tsk.Summary And tskFieldExactMatch(tsk, HealthCheckOptionsID, 11) < 0 And IncludedOf(11) Then
-                    If tsk.SuccessorTasks.Count = 0 And Not ((Left(tsk.Name, 8) = "External" Or tsk.ConstraintType = pjFNLT) And tsk.Milestone) And Not (tsk.OutlineLevel = 2 And IsWBSMilestone("Finish", tsk)) Then 'ignore external milestones AND the origin "Finish" Milestone
+                    If tsk.SuccessorTasks.Count = 0 And Not (tsk.OutlineLevel = 2 And IsWBSMilestone("Finish", tsk)) Then 'ignore the origin "Finish" Milestone
                         LogErrorTask 11, tsk, "!NameID!"
                     End If
                 End If
