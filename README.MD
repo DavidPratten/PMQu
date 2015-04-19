@@ -1,8 +1,8 @@
 ﻿# PMQu
 PMQu is an open-source project information quality checker for [MS Project](https://products.office.com/en-us/Project) 2010 and higher.
 
-# [Wiki](https://github.com/DavidPratten/PMQu/wiki) 
-- [Installing and Upgrading](https://github.com/DavidPratten/PMQu/wiki/Install)
+# Documentation
+- [Wiki](https://github.com/DavidPratten/PMQu/wiki) 
 
 # PMQu is sustained by your interest
 * Download and use PMQu in your project or PMO.
