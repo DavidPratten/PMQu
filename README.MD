@@ -14,4 +14,4 @@ PMQu is an open-source project information quality checker for [MS Project](http
 * Log an issue or a feature request.
 * Clone the repository, add a feature or bugfix, and send a pull request.
 
-PMQu is licensed under the terms of the MIT License. See [LICENSE](LICENSE) for details.
+PMQu is licensed under the terms of the MIT License. See [LICENSE](https://github.com/DavidPratten/PMQu/blob/master/LICENSE) for details.
