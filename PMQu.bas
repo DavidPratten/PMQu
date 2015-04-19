@@ -1,6 +1,6 @@
 Attribute VB_Name = "PMQu"
 Option Explicit
-Global Const ver = "1.0.203"
+Global Const ver = "1.0.204"
 ' --------------------------------------------------------
 ' PMQu
 ' (c) David R Pratten (2013-2015)
@@ -311,6 +311,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(8) = 60
     descOf(9) = "Task Type other than Fixed Units" ' Item.
     bandOf(9) = 50
+    sevOf(9) = sevWarning
     descOf(10) = "Tasks/Milestones without predecessor" ' Network.  ' (excl. External and SNET Milestones)"
     bandOf(10) = 40
     descOf(11) = "Tasks/Milestones without successor" ' Network.  ' (excl. External and FNLT Milestones)"
@@ -337,8 +338,10 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     bandOf(24) = 30
     descOf(25) = "Actual Start is after Status Date" ' Progress.
     bandOf(25) = 70
+    sevOf(25) = sevWarning
     descOf(26) = "Actual Finish is after Status Date" ' Progress.
     bandOf(26) = 70
+    sevOf(26) = sevWarning
     descOf(27) = "Summary has fewer than two children" ' WBS/PBS.
     bandOf(27) = 30
     descOf(28) = "Unmet constraint generating negative slack" ' Scheduling.
@@ -349,6 +352,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
     sevOf(29) = sevWarning
     descOf(30) = "Milestone %Complete must be 0% or 100%" ' Item.
     bandOf(30) = 70
+    sevOf(30) = sevWarning
     descOf(31) = "Dependency is redundant" ' Network.
     bandOf(31) = 40
     descOf(32) = "Project has more than one top level task." ' WBS/PBS.
@@ -860,7 +864,7 @@ continue2332:
         If bandFound(band) And band = 60 Then message = message & "<h2>Scheduling</h2>"
         If bandFound(band) And band = 70 Then
             message = message & "<h2>Progress</h2>"
-            If maxSev > sevWarning Then message = message & "<div class=""details""><em>Progress not checked due to <span style=""color: darkred; font-size:150%;"">&#x2718;</span> errors above.</em></div>"
+            If maxSev > sevWarning Then message = message & "<div class=""details""><em>Progress wasn't checked due to <span style=""color: darkred; font-size:150%;"">&#x2718;</span> errors above.</em></div>"
         End If
         For i = 1 To maxTest
             If numOf(i) > 0 And bandOf(i) = band Then
