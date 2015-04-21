@@ -610,7 +610,7 @@ Private Function CheckAnalyse(IncludedTests As String, ReportName As String) As 
                 End If
                 For Each tsk2 In ActiveProject.tasks
                     If tsk2.ID >= LowID And tsk2.ID <= HighID Then
-                        If tsk2.Name = tsk.Name And tsk2.ID <> tsk.ID And tskFieldExactMatch(tsk, HealthCheckOptionsID, 19) < 0 And IncludedOf(19) Then
+                        If tsk2.Name = tsk.Name And tsk2.ID > tsk.ID And tskFieldExactMatch(tsk, HealthCheckOptionsID, 19) < 0 And IncludedOf(19) Then
                             LogErrorTask 19, tsk, "!NameID! and !NameID2! have duplicate names.", tsk2
                         End If
                     End If
